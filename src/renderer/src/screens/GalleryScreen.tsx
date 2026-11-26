@@ -162,6 +162,7 @@ export const GalleryScreen: React.FC = () => {
                 items={pageItems}
                 presets={presets}
                 onSelectMedia={handleSelectMedia}
+                layoutCapacity={Math.min(cardsPerPage, items.length)}
               />
             </motion.div>
           </AnimatePresence>

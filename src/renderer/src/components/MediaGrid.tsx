@@ -9,6 +9,8 @@ export interface MediaGridProps {
   presets: KioskAnimationPresets;
   onSelectMedia: (id: string) => void;
   stageSize?: GridStageSize;
+  /** Total page capacity (e.g. min(cardsPerPage, totalItems)) so card size stays constant across pages. */
+  layoutCapacity?: number;
 }
 
 export interface GridStageSize {
@@ -95,8 +97,8 @@ export function computeGridColumns(visibleCount: number): number {
 }
 
 export const MediaGrid: React.FC<MediaGridProps> = React.memo(
-  ({ items, presets, onSelectMedia, stageSize }) => {
-    const layout = computeGridLayout(items.length, stageSize);
+  ({ items, presets, onSelectMedia, stageSize, layoutCapacity }) => {
+    const layout = computeGridLayout(layoutCapacity ?? items.length, stageSize);
 
     return (
       <div

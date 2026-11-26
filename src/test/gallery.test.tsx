@@ -121,6 +121,32 @@ describe('GalleryScreen interactions', () => {
     expect(useMediaStore.getState().currentPage).toBe(1);
   });
 
+  it('keeps card width/height/columns constant across pages based on page capacity (no size jump on partial last page)', () => {
+    useMediaStore.getState().setScanResult(
+      {
+        items: makeItems(20),
+        ignored_orphan_count: 0,
+        video_count: 20,
+        image_count: 20,
+        errors: [],
+        root: 'C:/Media',
+      },
+      12
+    );
+
+    render(<GalleryScreen />);
+    const gridPage0 = screen.getByTestId('media-grid');
+    const w0 = gridPage0.getAttribute('data-card-width');
+    const h0 = gridPage0.getAttribute('data-card-height');
+    const cols0 = gridPage0.getAttribute('data-columns');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    const gridPage1 = screen.getByTestId('media-grid');
+    expect(gridPage1.getAttribute('data-card-width')).toBe(w0);
+    expect(gridPage1.getAttribute('data-card-height')).toBe(h0);
+    expect(gridPage1.getAttribute('data-columns')).toBe(cols0);
+  });
+
   it('supports horizontal swipe (>=80px) and ignores vertical drag', () => {
     useMediaStore.getState().setScanResult(
       {
