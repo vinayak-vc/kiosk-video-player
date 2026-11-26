@@ -40,3 +40,7 @@ android-out/*
 !android-out/INSTALL.md
 *.apk
 *.aab
+
+# Test outputs
+test-results/
+test-fixtures/
