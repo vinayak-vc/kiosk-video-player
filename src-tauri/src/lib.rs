@@ -16,12 +16,15 @@ pub fn run() {
             if let Ok(logger) = Logger::new(&app_handle) {
                 app.manage(logger);
             }
+            let _ = window::setup_kiosk_window(&app_handle);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_app_config,
             commands::get_media_items,
-            commands::log_client_message
+            commands::log_client_message,
+            commands::exit_kiosk_app,
+            commands::trigger_admin_shortcut
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
