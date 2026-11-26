@@ -29,6 +29,8 @@ describe('App kiosk key guard & shortcuts', () => {
     vi.mocked(bridge.getMediaItems).mockResolvedValue({
       items: [],
       ignored_orphan_count: 0,
+      video_count: 0,
+      image_count: 0,
       errors: [],
       root: 'C:/Kiosk/Media',
     });

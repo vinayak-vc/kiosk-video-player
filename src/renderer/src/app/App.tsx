@@ -1,10 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Stage } from '../components/Stage';
 import { bridge } from '../services/bridge';
 import { useApplicationStore } from '../stores/applicationStore';
 import { useMediaStore } from '../stores/mediaStore';
 import { usePlayerStore } from '../stores/playerStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { GalleryScreen } from '../screens/GalleryScreen';
+import { LoadingScreen } from '../screens/LoadingScreen';
+import { ErrorScreen } from '../screens/ErrorScreen';
+import { EmptyScreen } from '../screens/EmptyScreen';
 import '../styles/global.css';
 import styles from './App.module.css';
 
@@ -12,7 +16,47 @@ export const App: React.FC = () => {
   const appState = useApplicationStore((s) => s.state);
   const errorReason = useApplicationStore((s) => s.errorReason);
   const dispatch = useApplicationStore((s) => s.dispatch);
-  const mediaCount = useMediaStore((s) => s.items.length);
+  const items = useMediaStore((s) => s.items);
+  const mediaRoot = useMediaStore((s) => s.root);
+  const videoCount = useMediaStore((s) => s.videoCount);
+  const imageCount = useMediaStore((s) => s.imageCount);
+  const configRoot = useSettingsStore((s) => s.config.kiosk_media_root);
+
+  const performScan = useCallback(async (cardsPerPage?: number) => {
+    try {
+      const perPage = cardsPerPage ?? useSettingsStore.getState().config.cards_per_page;
+      const scan = await useMediaStore.getState().refresh(perPage);
+      if (scan && scan.errors.length > 0 && scan.items.length === 0) {
+        useApplicationStore
+          .getState()
+          .dispatch('SCAN_FAIL', { errorReason: scan.errors[0] });
+      } else {
+        useApplicationStore.getState().dispatch('SCAN_OK');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      useApplicationStore.getState().dispatch('SCAN_FAIL', { errorReason: msg });
+    }
+  }, []);
+
+  const handleRetryScan = useCallback(async () => {
+    const curState = useApplicationStore.getState().state;
+    useApplicationStore.getState().dispatch(curState === 'ERROR' ? 'RETRY' : 'SCAN_START');
+    await performScan();
+  }, [performScan]);
+
+  const handleSelectFolder = useCallback(async () => {
+    try {
+      const picked = await bridge.pickMediaFolder();
+      if (!picked) return;
+      const updated = await useSettingsStore.getState().setMediaRoot(picked);
+      useApplicationStore.getState().dispatch('SCAN_START');
+      await performScan(updated.cards_per_page);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      useApplicationStore.getState().dispatch('FATAL_ERROR', { errorReason: msg });
+    }
+  }, [performScan]);
 
   // 1. Kiosk key guard, contextmenu, wheel zoom, and admin shortcut subscription
   useEffect(() => {
@@ -85,27 +129,11 @@ export const App: React.FC = () => {
         const cfg = await useSettingsStore.getState().loadConfig();
         if (!mounted) return;
         useApplicationStore.getState().dispatch('INIT_DONE');
-
-        const perPage = cfg?.cards_per_page ?? 8;
-        const scan = await useMediaStore.getState().refresh(perPage);
-        if (!mounted) return;
-
-        if (scan && scan.errors.length > 0 && scan.items.length === 0) {
-          useApplicationStore
-            .getState()
-            .dispatch('SCAN_FAIL', { errorReason: scan.errors[0] });
-        } else {
-          useApplicationStore.getState().dispatch('SCAN_OK');
-        }
+        await performScan(cfg?.cards_per_page ?? 8);
       } catch (err) {
         if (!mounted) return;
         const msg = err instanceof Error ? err.message : String(err);
-        const appStore = useApplicationStore.getState();
-        if (appStore.state === 'INITIALIZING') {
-          appStore.dispatch('FATAL_ERROR', { errorReason: msg });
-        } else if (appStore.state === 'SCANNING_MEDIA') {
-          appStore.dispatch('SCAN_FAIL', { errorReason: msg });
-        }
+        useApplicationStore.getState().dispatch('FATAL_ERROR', { errorReason: msg });
       }
     };
 
@@ -129,31 +157,58 @@ export const App: React.FC = () => {
       mounted = false;
       unlistenMedia.then((fn) => fn()).catch(() => {});
     };
-  }, []);
+  }, [performScan]);
 
-  return (
-    <Stage>
-      <div className={styles.appContainer}>
-        {appState === 'ADMIN_PANEL' ? (
-          <div>
+  const renderScreen = () => {
+    switch (appState) {
+      case 'INITIALIZING':
+      case 'SCANNING_MEDIA':
+        return (
+          <LoadingScreen
+            message={
+              appState === 'INITIALIZING'
+                ? 'Initializing Kiosk...'
+                : 'Scanning Media Library...'
+            }
+          />
+        );
+      case 'ERROR':
+        return (
+          <ErrorScreen
+            errorReason={errorReason ?? 'Failed to access media folder'}
+            mediaRoot={mediaRoot || configRoot}
+            onSelectFolder={handleSelectFolder}
+            onRetry={handleRetryScan}
+          />
+        );
+      case 'ADMIN_PANEL':
+        return (
+          <div className={styles.appContainer}>
             <h1 className={styles.appTitle}>ADMIN PANEL (PLACEHOLDER)</h1>
             <p className={styles.appSubtitle}>Full Admin UI arrives in Phase 6</p>
             <button type="button" onClick={() => dispatch('ADMIN_CLOSE')}>
               Close
             </button>
           </div>
-        ) : (
-          <>
-            <h1 className={styles.appTitle}>KIOSK VIDEO PLAYER</h1>
-            <p className={styles.appSubtitle}>
-              State: {appState} | Media: {mediaCount}
-              {errorReason ? ` | Error: ${errorReason}` : ''}
-            </p>
-          </>
-        )}
-      </div>
-    </Stage>
-  );
+        );
+      case 'GALLERY':
+      default:
+        if (items.length === 0) {
+          return (
+            <EmptyScreen
+              root={mediaRoot || configRoot}
+              videoCount={videoCount}
+              imageCount={imageCount}
+              onSelectFolder={handleSelectFolder}
+              onRetry={handleRetryScan}
+            />
+          );
+        }
+        return <GalleryScreen />;
+    }
+  };
+
+  return <Stage>{renderScreen()}</Stage>;
 };
 
 export default App;

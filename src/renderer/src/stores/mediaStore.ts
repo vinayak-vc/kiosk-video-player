@@ -5,6 +5,8 @@ import { bridge } from '../services/bridge';
 export interface MediaStoreState {
   items: MediaItem[];
   ignoredOrphanCount: number;
+  videoCount: number;
+  imageCount: number;
   scanErrors: string[];
   root: string;
   isScanning: boolean;
@@ -29,6 +31,8 @@ export function clampPageIndex(page: number, itemCount: number, cardsPerPage: nu
 export const useMediaStore = create<MediaStoreState>((set, get) => ({
   items: [],
   ignoredOrphanCount: 0,
+  videoCount: 0,
+  imageCount: 0,
   scanErrors: [],
   root: '',
   isScanning: false,
@@ -39,6 +43,8 @@ export const useMediaStore = create<MediaStoreState>((set, get) => ({
     set({
       items: result.items,
       ignoredOrphanCount: result.ignored_orphan_count,
+      videoCount: result.video_count ?? 0,
+      imageCount: result.image_count ?? 0,
       scanErrors: result.errors,
       root: result.root,
       isScanning: false,
@@ -78,6 +84,8 @@ export const useMediaStore = create<MediaStoreState>((set, get) => ({
     set({
       items: [],
       ignoredOrphanCount: 0,
+      videoCount: 0,
+      imageCount: 0,
       scanErrors: [],
       root: '',
       isScanning: false,

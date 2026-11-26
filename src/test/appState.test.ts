@@ -148,6 +148,8 @@ describe('useMediaStore page clamping on refresh', () => {
     const scan20: ScanResult = {
       items: makeItems(20),
       ignored_orphan_count: 0,
+      video_count: 20,
+      image_count: 20,
       errors: [],
       root: 'C:/Media',
     };

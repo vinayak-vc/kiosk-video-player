@@ -1,0 +1,86 @@
+import React, { useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { AlertTriangle, FolderOpen, RefreshCw } from 'lucide-react';
+import { createAnimationPresets } from '../services/AnimationService';
+import { AudioService } from '../services/AudioService';
+import styles from './StateScreens.module.css';
+
+export interface ErrorScreenProps {
+  errorReason: string;
+  mediaRoot?: string;
+  onSelectFolder: () => Promise<void> | void;
+  onRetry: () => Promise<void> | void;
+}
+
+export const ErrorScreen: React.FC<ErrorScreenProps> = ({
+  errorReason,
+  mediaRoot,
+  onSelectFolder,
+  onRetry,
+}) => {
+  const [busy, setBusy] = useState(false);
+  const reducedMotion = Boolean(useReducedMotion());
+  const presets = useMemo(() => createAnimationPresets(reducedMotion), [reducedMotion]);
+
+  const handleSelect = async () => {
+    if (busy) return;
+    AudioService.play('tap');
+    setBusy(true);
+    try {
+      await onSelectFolder();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (busy) return;
+    AudioService.play('tap');
+    setBusy(true);
+    try {
+      await onRetry();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <motion.section
+      className={styles.screenContainer}
+      variants={presets.emptyStateEntrance}
+      initial="hidden"
+      animate="visible"
+      data-testid="error-screen"
+    >
+      <div className={styles.cardBox}>
+        <div className={`${styles.iconRing} ${styles.iconRingError}`}>
+          <AlertTriangle size={44} />
+        </div>
+        <h1 className={styles.title}>Unable to Load Media</h1>
+        <p className={styles.description}>{errorReason}</p>
+        {mediaRoot && <div className={styles.pathChip}>{mediaRoot}</div>}
+
+        <div className={styles.actionsRow}>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={handleSelect}
+            disabled={busy}
+          >
+            <FolderOpen size={22} />
+            Select another folder
+          </button>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={handleRetry}
+            disabled={busy}
+          >
+            <RefreshCw size={20} />
+            Retry
+          </button>
+        </div>
+      </div>
+    </motion.section>
+  );
+};

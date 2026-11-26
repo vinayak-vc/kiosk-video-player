@@ -42,6 +42,8 @@ pub struct MediaItem {
 pub struct ScanResult {
     pub items: Vec<MediaItem>,
     pub ignored_orphan_count: usize,
+    pub video_count: usize,
+    pub image_count: usize,
     pub errors: Vec<String>,
     pub root: String,
 }
@@ -158,6 +160,8 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
     let mut videos_by_key: HashMap<String, (&str, &DirEntryInfo)> = HashMap::new();
     let mut best_image_by_key: HashMap<String, CandidateImage<'_>> = HashMap::new();
     let mut duplicate_video_orphans: usize = 0;
+    let mut video_count: usize = 0;
+    let mut image_count: usize = 0;
 
     for entry in sorted_entries {
         let Some((stem, ext_lower)) = split_stem_and_ext(&entry.file_name) else {
@@ -166,6 +170,7 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
         let key = stem.to_ascii_lowercase();
 
         if media_extensions::is_video_ext(&ext_lower) {
+            video_count += 1;
             if let std::collections::hash_map::Entry::Vacant(e) = videos_by_key.entry(key) {
                 e.insert((stem, entry));
             } else {
@@ -174,6 +179,7 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
                 duplicate_video_orphans += 1;
             }
         } else if let Some(priority) = media_extensions::image_priority(&ext_lower) {
+            image_count += 1;
             match best_image_by_key.get(&key) {
                 Some(existing) if existing.priority <= priority => {}
                 _ => {
@@ -214,6 +220,8 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
     ScanResult {
         items,
         ignored_orphan_count: orphan_videos + duplicate_video_orphans + orphan_images,
+        video_count,
+        image_count,
         errors: initial_errors,
         root: root.to_string(),
     }
@@ -235,6 +243,8 @@ impl MediaScanner {
                 return ScanResult {
                     items: Vec::new(),
                     ignored_orphan_count: 0,
+                    video_count: 0,
+                    image_count: 0,
                     errors: vec![format!("Failed to read media directory '{}': {}", root_str, e)],
                     root: root_str,
                 };

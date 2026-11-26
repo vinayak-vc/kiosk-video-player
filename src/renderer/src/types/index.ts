@@ -12,6 +12,8 @@ export interface MediaItem {
 export interface ScanResult {
   items: MediaItem[];
   ignored_orphan_count: number;
+  video_count: number;
+  image_count: number;
   errors: string[];
   root: string;
 }
