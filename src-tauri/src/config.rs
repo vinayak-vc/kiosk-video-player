@@ -13,6 +13,7 @@ pub struct AppConfig {
     pub idle_timeout_seconds: u64,
     pub controls_auto_hide_seconds: u64,
     pub slideshow_mode: String,
+    pub screensaver_sound: bool,
     pub cards_per_page: usize,
     pub sfx_enabled: bool,
     pub return_to_gallery_on_end: bool,
@@ -35,7 +36,8 @@ impl Default for AppConfig {
             kiosk_media_root: default_media_root(),
             idle_timeout_seconds: 60,
             controls_auto_hide_seconds: 4,
-            slideshow_mode: "shuffle".to_string(),
+            slideshow_mode: "screensaver".to_string(),
+            screensaver_sound: true,
             cards_per_page: 12,
             sfx_enabled: true,
             return_to_gallery_on_end: true,
@@ -135,6 +137,7 @@ const KNOWN_ENV_KEYS: &[&str] = &[
     "IDLE_TIMEOUT_SECONDS",
     "CONTROLS_AUTO_HIDE_SECONDS",
     "SLIDESHOW_MODE",
+    "SCREENSAVER_SOUND",
     "CARDS_PER_PAGE",
     "SFX_ENABLED",
     "RETURN_TO_GALLERY_ON_END",
@@ -256,10 +259,17 @@ pub fn load_config_from_paths(
 
                 if let Some(v) = env_map.get("SLIDESHOW_MODE") {
                     let mode = v.trim().to_ascii_lowercase();
-                    if mode == "shuffle" || mode == "sequential" {
+                    if mode == "screensaver" || mode == "shuffle" || mode == "sequential" {
                         cfg.slideshow_mode = mode;
                     } else {
-                        warn("Invalid SLIDESHOW_MODE in .env; using default (shuffle)");
+                        warn("Invalid SLIDESHOW_MODE in .env; using default (screensaver)");
+                    }
+                }
+
+                if let Some(v) = env_map.get("SCREENSAVER_SOUND") {
+                    match parse_bool(v) {
+                        Some(b) => cfg.screensaver_sound = b,
+                        None => warn("Invalid SCREENSAVER_SOUND in .env; using default (true)"),
                     }
                 }
 
@@ -432,7 +442,7 @@ RETURN_TO_GALLERY_ON_END=invalid_bool
         assert_eq!(cfg.kiosk_media_root, "D:/Videos");
         assert_eq!(cfg.idle_timeout_seconds, 60); // invalid -> default
         assert_eq!(cfg.controls_auto_hide_seconds, 4); // 0 -> default
-        assert_eq!(cfg.slideshow_mode, "shuffle"); // invalid -> default
+        assert_eq!(cfg.slideshow_mode, "screensaver"); // invalid -> default
         assert_eq!(cfg.cards_per_page, 12);
         assert!(!cfg.sfx_enabled);
         assert!(cfg.return_to_gallery_on_end); // invalid -> default
@@ -524,6 +534,32 @@ RETURN_TO_GALLERY_ON_END=invalid_bool
 
         let cfg = load_config_from_paths(Some(&env_file), &app_data, None);
         assert_eq!(cfg.kiosk_media_root, "C:/FallbackMedia");
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_screensaver_mode_and_sound_env_parsing() {
+        let tmp = make_temp_dir("screensaver_cfg");
+        let app_data = tmp.join("appdata");
+        fs::create_dir_all(&app_data).unwrap();
+
+        // Defaults: slideshow_mode = screensaver, screensaver_sound = true, cards_per_page = 12
+        let def_cfg = load_config_from_paths(None, &app_data, None);
+        assert_eq!(def_cfg.slideshow_mode, "screensaver");
+        assert!(def_cfg.screensaver_sound);
+        assert_eq!(def_cfg.cards_per_page, 12);
+
+        let env_file = tmp.join("kiosk.env");
+        fs::write(
+            &env_file,
+            "SLIDESHOW_MODE=sequential\nSCREENSAVER_SOUND=false\nCARDS_PER_PAGE=15\n",
+        )
+        .unwrap();
+        let cfg = load_config_from_paths(Some(&env_file), &app_data, None);
+        assert_eq!(cfg.slideshow_mode, "sequential");
+        assert!(!cfg.screensaver_sound);
+        assert_eq!(cfg.cards_per_page, 15);
 
         let _ = fs::remove_dir_all(&tmp);
     }

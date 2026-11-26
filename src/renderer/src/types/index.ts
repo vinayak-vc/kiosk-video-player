@@ -9,8 +9,15 @@ export interface MediaItem {
   file_size: number;
 }
 
+export interface ScreensaverInfo {
+  video_path: string;
+  video_url: string;
+  file_size: number;
+}
+
 export interface ScanResult {
   items: MediaItem[];
+  screensaver?: ScreensaverInfo | null;
   ignored_orphan_count: number;
   video_count: number;
   image_count: number;
@@ -23,6 +30,7 @@ export interface AppConfig {
   idle_timeout_seconds: number;
   controls_auto_hide_seconds: number;
   slideshow_mode: string;
+  screensaver_sound: boolean;
   cards_per_page: number;
   sfx_enabled: boolean;
   return_to_gallery_on_end: boolean;

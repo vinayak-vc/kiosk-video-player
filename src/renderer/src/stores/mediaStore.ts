@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { MediaItem, ScanResult } from '../types';
+import type { MediaItem, ScanResult, ScreensaverInfo } from '../types';
 import { bridge } from '../services/bridge';
 
 export interface MediaStoreState {
   items: MediaItem[];
+  screensaver: ScreensaverInfo | null;
   ignoredOrphanCount: number;
   videoCount: number;
   imageCount: number;
@@ -30,6 +31,7 @@ export function clampPageIndex(page: number, itemCount: number, cardsPerPage: nu
 
 export const useMediaStore = create<MediaStoreState>((set, get) => ({
   items: [],
+  screensaver: null,
   ignoredOrphanCount: 0,
   videoCount: 0,
   imageCount: 0,
@@ -38,10 +40,11 @@ export const useMediaStore = create<MediaStoreState>((set, get) => ({
   isScanning: false,
   currentPage: 0,
 
-  setScanResult: (result: ScanResult, cardsPerPage = 8) => {
+  setScanResult: (result: ScanResult, cardsPerPage = 12) => {
     const currentPage = clampPageIndex(get().currentPage, result.items.length, cardsPerPage);
     set({
       items: result.items,
+      screensaver: result.screensaver ?? null,
       ignoredOrphanCount: result.ignored_orphan_count,
       videoCount: result.video_count ?? 0,
       imageCount: result.image_count ?? 0,
@@ -83,6 +86,7 @@ export const useMediaStore = create<MediaStoreState>((set, get) => ({
   reset: () => {
     set({
       items: [],
+      screensaver: null,
       ignoredOrphanCount: 0,
       videoCount: 0,
       imageCount: 0,

@@ -26,6 +26,15 @@ pub mod media_extensions {
     }
 }
 
+pub const RESERVED_SCREENSAVER_STEM: &str = "screensaver";
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ScreensaverInfo {
+    pub video_path: String,
+    pub video_url: String,
+    pub file_size: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MediaItem {
     pub id: String,
@@ -41,6 +50,7 @@ pub struct MediaItem {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ScanResult {
     pub items: Vec<MediaItem>,
+    pub screensaver: Option<ScreensaverInfo>,
     pub ignored_orphan_count: usize,
     pub video_count: usize,
     pub image_count: usize,
@@ -159,6 +169,7 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
 
     let mut videos_by_key: HashMap<String, (&str, &DirEntryInfo)> = HashMap::new();
     let mut best_image_by_key: HashMap<String, CandidateImage<'_>> = HashMap::new();
+    let mut screensaver: Option<ScreensaverInfo> = None;
     let mut duplicate_video_orphans: usize = 0;
     let mut video_count: usize = 0;
     let mut image_count: usize = 0;
@@ -168,6 +179,18 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
             continue;
         };
         let key = stem.to_ascii_lowercase();
+
+        if key == RESERVED_SCREENSAVER_STEM {
+            if media_extensions::is_video_ext(&ext_lower) && screensaver.is_none() {
+                screensaver = Some(ScreensaverInfo {
+                    video_path: entry.full_path.clone(),
+                    video_url: build_media_url(&entry.file_name),
+                    file_size: entry.file_size,
+                });
+            }
+            // Reserved screensaver video and any companion image are never gallery cards or orphans.
+            continue;
+        }
 
         if media_extensions::is_video_ext(&ext_lower) {
             video_count += 1;
@@ -219,6 +242,7 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
 
     ScanResult {
         items,
+        screensaver,
         ignored_orphan_count: orphan_videos + duplicate_video_orphans + orphan_images,
         video_count,
         image_count,
@@ -242,6 +266,7 @@ impl MediaScanner {
             Err(e) => {
                 return ScanResult {
                     items: Vec::new(),
+                    screensaver: None,
                     ignored_orphan_count: 0,
                     video_count: 0,
                     image_count: 0,
@@ -504,5 +529,37 @@ mod tests {
         assert_eq!(imgs_only.video_count, 0);
         assert_eq!(imgs_only.image_count, 3);
         assert!(imgs_only.items.is_empty());
+    }
+
+    #[test]
+    fn test_reserved_screensaver_excluded_from_items_and_orphans() {
+        let entries = vec![
+            entry("SCREENSAVER.MP4", false, 50_000),
+            entry("Screensaver.png", false, 1_000),
+            entry("Alpha.mp4", false, 20_000),
+            entry("Alpha.png", false, 500),
+        ];
+        let res = match_media_entries(&entries, "C:/Media", vec![]);
+        assert_eq!(res.items.len(), 1);
+        assert_eq!(res.items[0].display_title, "Alpha");
+        assert_eq!(res.ignored_orphan_count, 0);
+        assert_eq!(res.video_count, 1);
+        assert_eq!(res.image_count, 1);
+        let ss = res.screensaver.expect("screensaver should be populated");
+        assert_eq!(ss.video_url, "http://kiosk-media.localhost/SCREENSAVER.MP4");
+        assert_eq!(ss.file_size, 50_000);
+    }
+
+    #[test]
+    fn test_screensaver_only_directory_keeps_gallery_empty_with_screensaver_present() {
+        let entries = vec![entry("Screensaver.mp4", false, 12_345)];
+        let res = match_media_entries(&entries, "C:/Media", vec![]);
+        assert!(res.items.is_empty());
+        assert_eq!(res.ignored_orphan_count, 0);
+        assert_eq!(res.video_count, 0);
+        assert_eq!(res.image_count, 0);
+        let ss = res.screensaver.expect("screensaver should be populated");
+        assert_eq!(ss.video_url, "http://kiosk-media.localhost/Screensaver.mp4");
+        assert_eq!(ss.file_size, 12_345);
     }
 }
