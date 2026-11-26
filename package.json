@@ -14,8 +14,8 @@
     "package": "tauri build",
     "dist": "tauri build",
     "android:dev": "tauri android dev",
-    "android:build": "tauri android build --debug",
-    "android:install": "adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
+    "android:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-build.ps1",
+    "android:install": "powershell -NoProfile -Command \"$adb = Join-Path $(if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }) 'platform-tools\\adb.exe'; & $adb wait-for-device; & $adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk\""
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
