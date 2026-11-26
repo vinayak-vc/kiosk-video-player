@@ -24,12 +24,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' kiosk-media: asset: data:; media-src 'self' kiosk-media: asset: blob:; connect-src 'self' ipc: http://ipc.localhost; font-src 'self';"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' kiosk-media: data:; media-src 'self' kiosk-media: blob:; connect-src 'self' ipc: http://ipc.localhost; font-src 'self'; frame-src 'none'; object-src 'none';"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
