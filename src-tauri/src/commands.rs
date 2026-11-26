@@ -178,7 +178,20 @@ pub fn exit_kiosk_app(
 ) -> Result<(), String> {
     #[cfg(target_os = "android")]
     {
-        logger.info("exit_kiosk_app ignored on Android");
+        logger.info("exit_kiosk_app invoked on Android: calling MainActivity.exitKiosk");
+        let ctx = ndk_context::android_context();
+        let vm = unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }
+            .map_err(|e| format!("Failed to get JavaVM: {}", e))?;
+        let mut env = vm
+            .attach_current_thread()
+            .map_err(|e| format!("Failed to attach JNI thread: {}", e))?;
+        let _ = env
+            .with_local_frame(16, |env| {
+                let cls = env.find_class("com/viitor/kioskplayer/MainActivity")?;
+                env.call_static_method(cls, "exitKiosk", "()V", &[])?;
+                Ok(())
+            })
+            .map_err(|e: jni::errors::Error| format!("MainActivity.exitKiosk JNI failed: {}", e));
         Ok(())
     }
 

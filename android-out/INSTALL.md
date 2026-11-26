@@ -4,9 +4,9 @@ This folder contains the stripped, debug-key-signed Universal APK (`arm64-v8a` +
 
 ## Build Information
 - **File**: `kiosk-player-test-2026-11-26.apk`
-- **Size**: 11,592,143 bytes (11.06 MB)
-- **Built**: 2026-11-26 23:51 IST (from git HEAD `6728a59f2690cee132c58864cb204e68f1d69edd`)
-- **SHA-256**: `0520f0c8436d1935ce94726a7d97abc9114da7ec7f028942974e7364d5fbf1c0`
+- **Size**: 11,594,543 bytes (11.06 MB)
+- **Built**: 2026-11-27 00:15 IST (from git HEAD with A6 Kiosk Mode)
+- **SHA-256**: `ee9da16d5a2bfadf1157bb40ae18dd1b5b8c671eda51e06e81d75e861130e849`
 - **Architectures**: `arm64-v8a`, `x86_64`
 
 ## Option A: Install without `adb` (USB Stick / File Manager)
@@ -54,6 +54,31 @@ adb shell am start -n com.viitor.kioskplayer/.MainActivity
   - Screensaver status check
   - Embedded hardware test playback player with audio
   - Kiosk exit button
+
+## Android Kiosk Mode (A6) Features & Setup
+
+1. **Sticky Immersive Fullscreen**:
+   - Status bar and navigation bar are hidden by default via `WindowInsetsControllerCompat`.
+   - Transient bars appear momentarily only if swiped from the physical screen edge, and automatically re-hide after 2 seconds.
+   - Immersive mode is re-asserted on `onWindowFocusChanged` and `onResume`.
+
+2. **Continuous Keep-Awake**:
+   - Window flag `FLAG_KEEP_SCREEN_ON` is active so the 75-inch TV display never sleeps, dims, or locks while running.
+
+3. **Hardware Back Button / Edge Gesture Lock**:
+   - Hardware Back button and back swipe gestures are intercepted by `onBackPressedDispatcher` with a no-op callback, preventing visitors from exiting or dismissing the app.
+
+4. **Auto-Launch on Device Boot**:
+   - `BootReceiver` listens for `ACTION_BOOT_COMPLETED` and auto-launches `MainActivity` on TV power-up.
+
+5. **Kiosk Screen Pinning (Dedicated Kiosk / Device Owner)**:
+   - For dedicated commercial deployment where Home and Overview gestures must be locked at the OS level:
+     ```powershell
+     # Set device owner (must be run on unprovisioned device or before accounts are added; DO NOT run without owner approval):
+     adb shell dpm set-device-owner com.viitor.kioskplayer/.DeviceAdminReceiver
+     ```
+   - Normal sideload installations use sticky immersive fullscreen with back-lock and boot auto-start, which does not require Device Owner.
+
 
 ## Logs & Diagnostics
 
