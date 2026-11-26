@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Kiosk Video Player",
         "width": 1920,
         "height": 1080,
@@ -20,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' kiosk-media: asset: data:; media-src 'self' kiosk-media: asset: blob:; connect-src 'self' ipc: http://ipc.localhost; font-src 'self';"
     }
   },
   "bundle": {
