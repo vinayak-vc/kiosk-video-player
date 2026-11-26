@@ -90,3 +90,36 @@ Other decisions:
 - Re-render hot spots; transform/opacity-only animations?
 - Real tests that fail when the code is wrong (not snapshot-of-nothing)?
 - Build + tests actually executed, output attached.
+
+---
+
+## PLATFORM PIVOT (owner decision, 2026-11-26): ANDROID IS NOW THE PRIMARY TARGET
+
+- Target device: **75" touch Android TV** (touchscreen, Android; treat as a very large touch tablet, landscape, likely 3840x2160 physical). Input = touch. No remote/D-pad requirement.
+- Media location: **All-files access** (MANAGE_EXTERNAL_STORAGE). Default root `/sdcard/Kiosk/Media`. Sideloaded kiosk APK (not Google Play), so this permission is acceptable. Because the app can use plain `std::fs` paths with all-files access, the Rust scanner/matcher/protocol/watcher are REUSED as-is (watcher gets a polling fallback because inotify on FUSE-backed /sdcard is unreliable).
+- Stack: **Tauri v2 Android target** (same React UI + Rust core). Single codebase.
+- Windows build: **PAUSED, code kept.** Do NOT work on Windows-only items: NSIS installer (BT-29), WebView2 tuning, window chrome, Ctrl+Alt+Q/S shortcuts as primary UX, `.env` beside exe. Keep Windows code compiling behind `cfg(desktop)`/`cfg(windows)` but spend no effort on it.
+- Owner approved installing Android build tools (JDK 17, Android SDK/NDK cmdline tools, Rust Android targets).
+- Admin on Android: hidden long-press hotspot (2 s, top-left) is the PRIMARY path; exit-app path = admin panel button (optionally PIN-protected later).
+- Config on Android: baked defaults + `/sdcard/Kiosk/kiosk.env` (optional, editable over USB/file manager) + admin-selected root persisted in app data. Priority: admin override > kiosk.env > defaults.
+- Display: CSS-pixel viewport on a 4K panel is typically 1920x1080 at DPR 2 -> existing scaled 1920x1080 stage is correct; also verify raw 3840x2160 viewport.
+- Video: Android System WebView (Chromium) HTML5 video. 4K H.264/H.265 hardware decode support varies by device - Phase A includes a playback spike on the real device with the Futurotec videos.
+
+### Android phase cards (A1..A9) take priority over remaining platform-neutral phases. Phases 4-6 UI work (player, slideshow, admin) is shared and still needed - resume after A1-A5 pass.
+
+---
+
+## SCREENSAVER CHANGE (owner decision, 2026-11-26)
+
+- Idle behaviour is now **SCREENSAVER mode**: the owner places `Screensaver.mp4` in the media folder; on idle timeout it plays **on loop** until a tap. Default `SLIDESHOW_MODE=screensaver`.
+- The earlier "all videos, one after another (shuffle-bag)" slideshow is **kept, not removed**: `SLIDESHOW_MODE=shuffle|sequential` switches back to it. Build the new mode as a strategy beside the old one.
+- `Screensaver.mp4` (case-insensitive) is a **reserved file**: not a gallery card, not an orphan. Its companion image (if any) is ignored too.
+- Fallback: screensaver file missing/broken -> WARN + fall back to shuffle over valid pairs; nothing playable -> ERROR admin state.
+- New config: `SCREENSAVER_SOUND=true|false` (default true).
+- Cards: P5-0 (BT-40 new), BT-21 (strategies), BT-22 (screen; seamless loop investigation).
+
+---
+
+## FINAL DELIVERY (owner instruction, 2026-11-26)
+
+After ALL features are complete and fully tested: build the release APK, upload it to the GitHub Releases page of `vinayak-vc/kiosk-video-player`, and email the owner the link (MailSocket owner route approved). Constraints found: repo is PUBLIC, remote is empty, gh account on this PC is read-only -> owner fixes access first; ask for confirmation before pushing source to a public repo; keystore stays outside the repo. Tracked on the board card "FINAL: ..." (BT-43).

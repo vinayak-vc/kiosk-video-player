@@ -1796,6 +1796,8 @@ name = "kiosk-video-player"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "jni",
+ "ndk-context",
  "notify",
  "serde",
  "serde_json",
