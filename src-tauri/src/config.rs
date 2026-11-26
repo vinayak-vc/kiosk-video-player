@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use tauri::{AppHandle, Manager};
 
 use crate::logger::Logger;
@@ -37,9 +37,10 @@ pub struct PersistedConfig {
     pub kiosk_media_root: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct ConfigService {
-    config: RwLock<AppConfig>,
-    app_data_dir: PathBuf,
+    config: Arc<RwLock<AppConfig>>,
+    app_data_dir: Arc<PathBuf>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -92,9 +93,11 @@ pub fn validate_media_folder(raw_path: &str) -> Result<PathBuf, String> {
 }
 
 /// Parses a .env file content into key-value pairs without logging secrets.
+/// Strips a leading UTF-8 BOM (e.g. from Windows Notepad) and handles CRLF/LF.
 pub fn parse_env_content(content: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
-    for raw_line in content.lines() {
+    let stripped = content.strip_prefix('\u{feff}').unwrap_or(content);
+    for raw_line in stripped.lines() {
         let line = raw_line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
@@ -115,6 +118,16 @@ pub fn parse_env_content(content: &str) -> HashMap<String, String> {
     }
     map
 }
+
+const KNOWN_ENV_KEYS: &[&str] = &[
+    "KIOSK_MEDIA_ROOT",
+    "IDLE_TIMEOUT_SECONDS",
+    "CONTROLS_AUTO_HIDE_SECONDS",
+    "SLIDESHOW_MODE",
+    "CARDS_PER_PAGE",
+    "SFX_ENABLED",
+    "RETURN_TO_GALLERY_ON_END",
+];
 
 /// Resolves the path to `.env`:
 /// - In debug/dev builds: checks current working dir and its parent (project root) first, then beside exe.
@@ -177,6 +190,19 @@ pub fn load_config_from_paths(
         match fs::read_to_string(path) {
             Ok(content) => {
                 let env_map = parse_env_content(&content);
+
+                let mut unknown_keys: Vec<&str> = env_map
+                    .keys()
+                    .map(|k| k.as_str())
+                    .filter(|k| !KNOWN_ENV_KEYS.contains(k))
+                    .collect();
+                if !unknown_keys.is_empty() {
+                    unknown_keys.sort_unstable();
+                    warn(&format!(
+                        "Unknown keys in .env ignored: {}",
+                        unknown_keys.join(", ")
+                    ));
+                }
 
                 if let Some(v) = env_map.get("KIOSK_MEDIA_ROOT") {
                     if !v.trim().is_empty() {
@@ -284,16 +310,16 @@ impl ConfigService {
         ));
 
         Ok(Self {
-            config: RwLock::new(cfg),
-            app_data_dir,
+            config: Arc::new(RwLock::new(cfg)),
+            app_data_dir: Arc::new(app_data_dir),
         })
     }
 
     pub fn new_for_test(env_path: Option<&Path>, app_data_dir: PathBuf) -> Self {
         let cfg = load_config_from_paths(env_path, &app_data_dir, None);
         Self {
-            config: RwLock::new(cfg),
-            app_data_dir,
+            config: Arc::new(RwLock::new(cfg)),
+            app_data_dir: Arc::new(app_data_dir),
         }
     }
 
@@ -306,9 +332,12 @@ impl ConfigService {
 
     pub fn set_media_root(&self, new_root: &str) -> Result<AppConfig, String> {
         let validated = validate_media_folder(new_root)?;
-        let normalized = validated.to_string_lossy().to_string();
+        let normalized = validated
+            .to_str()
+            .ok_or_else(|| "Media folder path must be valid UTF-8".to_string())?
+            .to_string();
 
-        fs::create_dir_all(&self.app_data_dir)
+        fs::create_dir_all(self.app_data_dir.as_path())
             .map_err(|e| format!("Failed to ensure app_data_dir: {}", e))?;
 
         let persisted = PersistedConfig {
@@ -316,8 +345,14 @@ impl ConfigService {
         };
         let json = serde_json::to_string_pretty(&persisted)
             .map_err(|e| format!("Failed to serialize config.json: {}", e))?;
-        fs::write(self.app_data_dir.join("config.json"), json)
-            .map_err(|e| format!("Failed to write config.json: {}", e))?;
+
+        // Atomic write: write to temp file then rename to prevent corruption on power loss
+        let tmp_path = self.app_data_dir.join("config.json.tmp");
+        let final_path = self.app_data_dir.join("config.json");
+        fs::write(&tmp_path, json)
+            .map_err(|e| format!("Failed to write config.json.tmp: {}", e))?;
+        fs::rename(&tmp_path, &final_path)
+            .map_err(|e| format!("Failed to replace config.json: {}", e))?;
 
         let mut guard = self
             .config
@@ -427,6 +462,40 @@ RETURN_TO_GALLERY_ON_END=invalid_bool
             "NOT_DIRECTORY"
         );
         assert!(validate_media_folder(tmp.to_str().unwrap()).is_ok());
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_env_bom_and_crlf_line_endings() {
+        let tmp = make_temp_dir("bom_crlf");
+        let env_file = tmp.join(".env");
+        // UTF-8 BOM + CRLF + unknown key
+        let content = "\u{feff}KIOSK_MEDIA_ROOT=E:/BomMedia\r\nIDLE_TIMEOUT_SECONDS=45\r\nUNKNOWN_SETTING=secret_value\r\n";
+        fs::write(&env_file, content.as_bytes()).unwrap();
+
+        let app_data = tmp.join("appdata");
+        fs::create_dir_all(&app_data).unwrap();
+
+        let cfg = load_config_from_paths(Some(&env_file), &app_data, None);
+        assert_eq!(cfg.kiosk_media_root, "E:/BomMedia");
+        assert_eq!(cfg.idle_timeout_seconds, 45);
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_corrupt_config_json_ignored_without_crash() {
+        let tmp = make_temp_dir("corrupt_json");
+        let env_file = tmp.join(".env");
+        fs::write(&env_file, "KIOSK_MEDIA_ROOT=C:/FallbackMedia\n").unwrap();
+
+        let app_data = tmp.join("appdata");
+        fs::create_dir_all(&app_data).unwrap();
+        fs::write(app_data.join("config.json"), "{ not valid json !!!").unwrap();
+
+        let cfg = load_config_from_paths(Some(&env_file), &app_data, None);
+        assert_eq!(cfg.kiosk_media_root, "C:/FallbackMedia");
 
         let _ = fs::remove_dir_all(&tmp);
     }

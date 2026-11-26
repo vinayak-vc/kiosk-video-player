@@ -219,6 +219,9 @@ pub fn match_media_entries(entries: &[DirEntryInfo], root: &str, initial_errors:
     }
 }
 
+/// Maximum directory entries processed per scan to prevent unbounded memory growth.
+pub const MAX_ENTRIES: usize = 20_000;
+
 pub struct MediaScanner;
 
 impl MediaScanner {
@@ -242,6 +245,13 @@ impl MediaScanner {
         let mut errors = Vec::new();
 
         for entry_res in read_dir {
+            if entries.len() >= MAX_ENTRIES {
+                errors.push(format!(
+                    "Folder has too many entries (limit {}); scan truncated",
+                    MAX_ENTRIES
+                ));
+                break;
+            }
             match entry_res {
                 Ok(entry) => {
                     let path = entry.path();
@@ -434,5 +444,34 @@ mod tests {
         let res = MediaScanner::scan_directory(&missing);
         assert!(res.items.is_empty());
         assert_eq!(res.errors.len(), 1);
+    }
+
+    #[test]
+    fn test_ignored_orphan_count_with_orphan_image_video_and_unsupported() {
+        let entries = vec![
+            entry("paired.mp4", false, 100),
+            entry("paired.jpg", false, 20),
+            entry("orphan_vid.mp4", false, 100),
+            entry("orphan_img.png", false, 20),
+            entry("unsupported.avi", false, 100),
+            entry("unsupported_thumb.mpg", false, 20),
+        ];
+        let res = match_media_entries(&entries, "C:/Media", vec![]);
+        assert_eq!(res.items.len(), 1);
+        // Exact expected count: 1 orphan video + 1 orphan image = 2 (unsupported files not counted as orphans)
+        assert_eq!(res.ignored_orphan_count, 2);
+    }
+
+    #[test]
+    fn test_my_video_title_and_percent_encoded_url() {
+        let entries = vec![
+            entry("My Video.mp4", false, 4096),
+            entry("my video.PNG", false, 512),
+        ];
+        let res = match_media_entries(&entries, "C:/Media", vec![]);
+        assert_eq!(res.items.len(), 1);
+        assert_eq!(res.items[0].display_title, "My Video");
+        assert_eq!(res.items[0].video_url, "http://kiosk-media.localhost/My%20Video.mp4");
+        assert_eq!(res.items[0].thumbnail_url, "http://kiosk-media.localhost/my%20video.PNG");
     }
 }

@@ -6,6 +6,7 @@ use crate::config::{
 };
 use crate::media::{MediaScanner, ScanResult};
 use crate::logger::Logger;
+use crate::watcher::MediaWatcher;
 
 pub const MAX_LOG_MESSAGE_LEN: usize = 2000;
 
@@ -36,14 +37,29 @@ pub fn get_config(config_service: State<'_, ConfigService>) -> Result<AppConfig,
 }
 
 #[command]
-pub fn set_media_root(
+pub async fn set_media_root(
     path: String,
     config_service: State<'_, ConfigService>,
+    media_watcher: State<'_, MediaWatcher>,
     logger: State<'_, Logger>,
 ) -> Result<AppConfig, String> {
     logger.info(&format!("set_media_root invoked with path='{}'", path.trim()));
-    match config_service.set_media_root(&path) {
+    let cfg_svc = config_service.inner().clone();
+    let path_clone = path.clone();
+
+    let result = tauri::async_runtime::spawn_blocking(move || cfg_svc.set_media_root(&path_clone))
+        .await
+        .map_err(|e| {
+            let msg = format!("set_media_root background task failed: {}", e);
+            logger.error(&msg);
+            msg
+        })?;
+
+    match result {
         Ok(cfg) => {
+            if let Err(err) = media_watcher.set_target(Path::new(&cfg.kiosk_media_root)) {
+                logger.warn(&format!("Failed to retarget MediaWatcher: {}", err));
+            }
             logger.info(&format!("Media root updated and persisted: '{}'", cfg.kiosk_media_root));
             Ok(cfg)
         }
@@ -102,12 +118,23 @@ pub fn validate_media_folder_cmd(path: String) -> Result<String, FolderValidatio
 }
 
 #[command]
-pub fn get_media_items(
+pub async fn get_media_items(
     config_service: State<'_, ConfigService>,
     logger: State<'_, Logger>,
 ) -> Result<ScanResult, String> {
     let cfg = config_service.get_config()?;
-    let result = MediaScanner::scan_directory(Path::new(&cfg.kiosk_media_root));
+    let root = cfg.kiosk_media_root;
+
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        MediaScanner::scan_directory(Path::new(&root))
+    })
+    .await
+    .map_err(|e| {
+        let msg = format!("get_media_items scan task failed: {}", e);
+        logger.error(&msg);
+        msg
+    })?;
+
     logger.info(&format!(
         "Media scan on '{}': {} items, {} orphans ignored, {} errors",
         result.root,
