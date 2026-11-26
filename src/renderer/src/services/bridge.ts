@@ -71,6 +71,10 @@ class TauriBridge {
     return invoke<void>('request_storage_permission');
   }
 
+  async writeDiagnostics(text: string): Promise<string> {
+    return invoke<string>('write_diagnostics', { text });
+  }
+
   async onAdminRequested(callback: () => void): Promise<UnlistenFn> {
     return listen('open-admin-panel', () => callback());
   }

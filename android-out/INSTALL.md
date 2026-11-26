@@ -1,31 +1,42 @@
-# Kiosk Video Player — Android Sideload & Test Guide (M1)
+# Kiosk Video Player — Android Sideload & Test Guide (A8 Production Release)
 
-This folder contains the stripped, debug-key-signed Universal APK (`arm64-v8a` + `x86_64`) for sideload testing on the 75-inch touch Android TV.
+This folder contains the production signed Universal Release APK (`arm64-v8a` + `x86_64`) for deployment on the 75-inch touch Android TV.
 
 ## Build Information
-- **File**: `kiosk-player-test-2026-11-26.apk`
-- **Size**: 11,594,543 bytes (11.06 MB)
-- **Built**: 2026-11-27 00:15 IST (from git HEAD with A6 Kiosk Mode)
-- **SHA-256**: `ee9da16d5a2bfadf1157bb40ae18dd1b5b8c671eda51e06e81d75e861130e849`
-- **Architectures**: `arm64-v8a`, `x86_64`
+- **File**: `kiosk-video-player-v1.0.0-release.apk`
+- **Version**: 1.0.0 (versionCode 10001)
+- **Size**: 11,634,411 bytes (11.1 MB)
+- **Built**: 2026-11-27 (Signed with official release keystore via APK Signature Scheme v2)
+- **SHA-256**: `ad654337e5996ee56343a1dd43e1e3d8a1ef84a0a76de119a8b90731965a4787`
+- **Certificate DN**: `CN=Viitor Kiosk Player, OU=Engineering, O=Viitor, L=Mumbai, ST=Maharashtra, C=IN`
+- **Architectures**: `arm64-v8a` (75" Android TV target), `x86_64` (emulator / dev)
 
-## Option A: Install without `adb` (USB Stick / File Manager)
+## Option A: One-Command Automated Install (Recommended via `adb`)
 
-1. Copy `kiosk-player-test-2026-11-26.apk` onto a USB flash drive (or into the TV's `Downloads` folder).
+Run the automated provisioning script from the repository root:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-android.ps1
+# Or via npm:
+npm run android:install
+```
+
+This script automatically:
+1. Waits for the TV to be online over ADB
+2. Installs `kiosk-video-player-v1.0.0-release.apk` with `-r -d`
+3. Automatically grants `MANAGE_EXTERNAL_STORAGE` permission via `appops`
+4. Creates `/sdcard/Kiosk/Media`
+5. Pushes sample Futurotec media pairs if empty
+6. Launches `com.viitor.kioskplayer/.MainActivity`
+7. Verifies process execution and reports active PID
+
+## Option B: Install without `adb` (USB Flash Drive / TV File Manager)
+
+1. Copy `kiosk-video-player-v1.0.0-release.apk` onto a USB flash drive.
 2. Plug the USB drive into the Android TV and open the TV's **File Manager** app.
 3. Tap the `.apk` file to install.
    - If prompted, open **Settings -> Install unknown apps** and enable permission for your File Manager.
 4. Launch **Kiosk Video Player**.
 5. On first launch, tap **Grant file access** -> enable **Allow access to manage all files** for **Kiosk Video Player**, then press **Back** to return to the app.
-
-## Option B: Install via `adb`
-
-```powershell
-adb install -r kiosk-player-test-2026-11-26.apk
-# Optional: grant all-files access via adb instead of the Settings UI
-adb shell appops set com.viitor.kioskplayer MANAGE_EXTERNAL_STORAGE allow
-adb shell am start -n com.viitor.kioskplayer/.MainActivity
-```
 
 ## Where to Put Media & Config
 

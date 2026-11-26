@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 #[cfg(not(target_os = "android"))]
 use tauri::Manager;
 use tauri::{command, AppHandle, Emitter, State};
@@ -427,6 +427,67 @@ pub fn toggle_fullscreen(
     }
 }
 
+pub const MAX_DIAGNOSTICS_LEN: usize = 200 * 1024; // 200 KB
+
+pub fn resolve_diagnostics_target_path(media_root_str: &str, _app_data_dir: Option<PathBuf>) -> PathBuf {
+    let media_root = Path::new(media_root_str);
+    let target_dir = if let Some(parent) = media_root.parent() {
+        if parent.as_os_str().is_empty() {
+            #[cfg(target_os = "android")]
+            { PathBuf::from("/storage/emulated/0/Kiosk") }
+            #[cfg(not(target_os = "android"))]
+            { _app_data_dir.unwrap_or_else(|| PathBuf::from(".")) }
+        } else {
+            parent.to_path_buf()
+        }
+    } else {
+        #[cfg(target_os = "android")]
+        { PathBuf::from("/storage/emulated/0/Kiosk") }
+        #[cfg(not(target_os = "android"))]
+        { _app_data_dir.unwrap_or_else(|| PathBuf::from(".")) }
+    };
+    target_dir.join("diagnostics.txt")
+}
+
+#[command]
+pub async fn write_diagnostics(
+    text: String,
+    _app_handle: AppHandle,
+    config_service: State<'_, ConfigService>,
+    logger: State<'_, Logger>,
+) -> Result<String, String> {
+    if text.len() > MAX_DIAGNOSTICS_LEN {
+        return Err(format!(
+            "Diagnostics report exceeds maximum allowed size ({} > {} bytes)",
+            text.len(),
+            MAX_DIAGNOSTICS_LEN
+        ));
+    }
+
+    let config = config_service.get_config()?;
+    #[cfg(not(target_os = "android"))]
+    let app_data = _app_handle.path().app_data_dir().ok();
+    #[cfg(target_os = "android")]
+    let app_data: Option<PathBuf> = None;
+
+    let target_path = resolve_diagnostics_target_path(&config.kiosk_media_root, app_data);
+    let target_dir = target_path.parent().ok_or_else(|| "Invalid target directory".to_string())?;
+
+    if !target_dir.exists() {
+        let _ = std::fs::create_dir_all(target_dir);
+    }
+
+    let tmp_path = target_dir.join("diagnostics.txt.tmp");
+    std::fs::write(&tmp_path, text.as_bytes())
+        .map_err(|e| format!("Failed to write temporary diagnostics file: {}", e))?;
+    std::fs::rename(&tmp_path, &target_path)
+        .map_err(|e| format!("Failed to commit diagnostics file: {}", e))?;
+
+    let path_str = target_path.to_string_lossy().to_string();
+    logger.info(&format!("Diagnostics report written to '{}' ({} bytes)", path_str, text.len()));
+    Ok(path_str)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,5 +516,12 @@ mod tests {
         let huge = "a".repeat(3000);
         let (_, capped) = validate_client_log("INFO", &huge).unwrap();
         assert_eq!(capped.len(), MAX_LOG_MESSAGE_LEN);
+    }
+
+    #[test]
+    fn test_resolve_diagnostics_target_path() {
+        let path = resolve_diagnostics_target_path("C:/React/Videos", None);
+        assert_eq!(path.file_name().unwrap(), "diagnostics.txt");
+        assert_eq!(path.parent().unwrap(), Path::new("C:/React"));
     }
 }

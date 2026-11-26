@@ -177,6 +177,17 @@ try {
     Write-Host "APK Path : $($ApkInfo.FullName)"
     Write-Host "APK Size : $($ApkInfo.Length) bytes ($SizeMB MB)"
     Write-Host "ABIs     : $(($Targets | ForEach-Object { $TargetMap[$_].Abi }) -join ', ')"
+
+    # Verify APK signature via apksigner if available
+    $BuildToolsDir = Join-Path $env:ANDROID_HOME "build-tools"
+    $LatestBuildTools = Get-ChildItem $BuildToolsDir -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+    if ($LatestBuildTools) {
+        $ApkSignerBat = Join-Path $LatestBuildTools.FullName "apksigner.bat"
+        if (Test-Path $ApkSignerBat) {
+            Write-Host "`n=== APK Signature Verification (apksigner) ==="
+            & $ApkSignerBat verify --verbose $ApkPath
+        }
+    }
 } finally {
     Pop-Location
 }

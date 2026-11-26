@@ -14,6 +14,11 @@ val tauriProperties = Properties().apply {
     }
 }
 
+val keystorePropsFile = file(
+    System.getenv("KIOSK_KEYSTORE_PROPERTIES")
+        ?: (System.getProperty("user.home") + "/.android/kiosk-keystore.properties")
+)
+
 android {
     compileSdk = 36
     namespace = "com.viitor.kioskplayer"
@@ -22,8 +27,24 @@ android {
         applicationId = "com.viitor.kioskplayer"
         minSdk = 26
         targetSdk = 36
-        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
-        versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "10001").toInt()
+        versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0.0")
+    }
+    signingConfigs {
+        if (keystorePropsFile.exists()) {
+            val keyProps = Properties().apply {
+                keystorePropsFile.inputStream().use { load(it) }
+            }
+            create("release") {
+                val storeFilePath = keyProps.getProperty("storeFile")
+                if (storeFilePath != null) {
+                    storeFile = file(storeFilePath)
+                }
+                storePassword = keyProps.getProperty("storePassword")
+                keyAlias = keyProps.getProperty("keyAlias")
+                keyPassword = keyProps.getProperty("keyPassword")
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -39,7 +60,11 @@ android {
             }
         }
         getByName("release") {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePropsFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             optimization {
                enable = true
             }

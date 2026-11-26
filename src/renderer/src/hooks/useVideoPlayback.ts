@@ -150,9 +150,11 @@ export function useVideoPlayback({
       readyFlag = true;
       lastObservedTime = video.currentTime;
       lastProgressAtMs = Date.now();
-      setIsReady(true);
       setIsBuffering(false);
       onCanPlayRef.current?.();
+      if (video.currentTime > 0) {
+        setIsReady(true);
+      }
     };
 
     const handlePlay = () => {
@@ -167,6 +169,9 @@ export function useVideoPlayback({
 
     const handleTimeUpdate = () => {
       if (disposed) return;
+      if (video.currentTime > 0) {
+        setIsReady(true);
+      }
       const now = Date.now();
       if (now - lastTimeUpdateMs < TIMEUPDATE_THROTTLE_MS) return;
       lastTimeUpdateMs = now;
@@ -180,7 +185,10 @@ export function useVideoPlayback({
     };
 
     const handlePlaying = () => {
-      if (!disposed) setIsBuffering(false);
+      if (!disposed) {
+        setIsBuffering(false);
+        setIsReady(true);
+      }
     };
 
     const handleEnded = () => {

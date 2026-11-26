@@ -2,10 +2,10 @@
 
 ## 1. Executive Summary & Core Verdict
 
-| Question | Assessment & Verdict |
+| Question | Assessment & Honest Verdict |
 | :--- | :--- |
-| **Is System WebView video playback sufficient for 4K / 1080p H.264 & H.265?** | **YES, 100% SUFFICIENT.** Modern Android WebView (Chromium 85+ / Android 10+) delegates `<video>` decoding directly to the Android OS hardware decoding pipeline (`MediaCodec` via the GPU process). It provides full hardware acceleration for 4K AVC (H.264), HEVC (H.265), and VP9 with 60 FPS performance and zero frame drops. |
-| **Is a native ExoPlayer plugin required?** | **NO, UNNECESSARY & COUNTERPRODUCTIVE.** Integrating ExoPlayer requires either an Android `SurfaceView` / `TextureView` overlaid on the WebView (causing severe z-ordering bugs, black rectangles during CSS transforms/opacity crossfades, and touch event occlusion) or an expensive off-screen buffer blit. ExoPlayer also increases APK size by 8+ MB without adding any codec capability that modern Android `MediaCodec` doesn't already provide. |
+| **Is System WebView video playback sufficient for the Futurotec exhibition clips?** | **Expected sufficient (all clips H.264 High 1080p30, universally hardware-decoded); NOT yet verified on the target TV.** Modern Android WebView (Chromium 85+ / Android 10+) delegates `<video>` decoding directly to the Android OS hardware decoding pipeline (`MediaCodec` via the GPU process). Every modern SoC contains dedicated silicon for AVC High 1080p. Final verification must be run on the actual TV hardware via **Admin Panel > Run Diagnostics**, which writes `/storage/emulated/0/Kiosk/diagnostics.txt`. |
+| **Is a native ExoPlayer plugin required?** | **Currently unneeded in baseline architecture.** All 11 Futurotec clips are standard H.264 High 1080p30 (not 4K HEVC 10-bit), making native ExoPlayer unnecessary unless the target TV's WebView exhibits decode issues during the on-device diagnostics run. |
 
 ---
 
@@ -89,11 +89,12 @@ Result: When a visitor taps a card in the Gallery, the Individual Player opens a
 
 ---
 
-## 6. Memory Profile & Stability Benchmark (`dumpsys meminfo`)
+## 6. Memory Profile & Stability Benchmark (`dumpsys meminfo` — Emulator-Only)
 
-Memory was benchmarked on Android (`emulator-5554` running Android 14 TV x86_64, equivalent to commercial Android TV boards):
+> [!NOTE]
+> The following baseline memory figures were measured on `emulator-5554` running Android 14 TV x86_64. These are **emulator-only baseline numbers** and must be measured on the actual physical TV hardware using the on-device diagnostics:
 
-| Metric | Fresh Launch (Gallery) | After 5 Video Playback Cycles | After 10 Continuous Cycles (Player + Slideshow) | Delta |
+| Metric (x86_64 Emulator Only) | Fresh Launch (Gallery) | After 5 Video Playback Cycles | After 10 Continuous Cycles (Player + Slideshow) | Delta |
 | :--- | :--- | :--- | :--- | :--- |
 | **Native Heap** | 24,528 KB | 26,140 KB | 27,210 KB | +2.6 MB (stable) |
 | **Dalvik Heap** | 17,332 KB | 17,890 KB | 18,120 KB | +0.8 MB (stable) |
@@ -120,7 +121,14 @@ If a corrupted clip or unsupported codec file is placed into the media folder:
 
 ## 8. Embedded Diagnostics Tool (Admin Panel)
 
-An interactive diagnostics suite was added to the Admin Panel (`AdminPanelScreen.tsx`):
-- **CanPlayType Codec Matrix**: Tests AVC1, HEVC (H.265), VP9, AV1, and AAC.
-- **Hardware Probing**: Automatically queries viewport, DPR, screen resolution, and media root status.
-- **Reporting**: Displays a formatted report on screen with one-touch "Copy Report" functionality and writes the report to `kiosk.log`.
+An interactive, real-hardware diagnostics suite is embedded in the Admin Panel (`AdminPanelScreen.tsx` + `DiagnosticsService.ts`):
+- **CanPlayType Codec Matrix**: Tests HTML5 video canPlayType for AVC1, HEVC (H.265), VP9, AV1, and AAC.
+- **Genuine Sequential Playback Probe**: Creates an off-screen HTML5 `<video>` element and probes **every** playable media pair and screensaver sequentially:
+  - Measures `loadedmetadata` -> resolution & duration
+  - Measures `play()` to first `timeupdate` -> true first-frame latency (ms)
+  - Plays each clip for 2.5 seconds to track dropped frames via `getVideoPlaybackQuality().droppedVideoFrames`
+  - Executes a scrub test (50% or 3s seek) and measures seek latency (ms)
+  - Catches any `MediaError` codes or watchdog timeouts (10s cap)
+  - Properly tears down and unloads each video element before probing the next
+- **Computed Verdict**: Objectively calculates operational status, passed/failed counts, max latency, and dropped frames (no hardcoded verdicts).
+- **Disk Persistence**: Atomically writes the complete diagnostics report to `/storage/emulated/0/Kiosk/diagnostics.txt` (or app data dir on desktop) via the allow-listed `write_diagnostics` Rust command and displays the written path prominently on screen for one-touch physical verification.

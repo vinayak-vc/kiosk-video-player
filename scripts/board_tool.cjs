@@ -50,12 +50,12 @@ async function moveTask(taskId, column) {
   return res;
 }
 
-async function addComment(taskId, content) {
-  const data = JSON.stringify({ author: 'Antigravity', content });
+async function addComment(taskId, text) {
+  const data = JSON.stringify({ author: 'Antigravity', text });
   const res = await request({
     host: '127.0.0.1',
     port: 8766,
-    path: `/api/board/tasks/${taskId}/comments?project=kiosk`,
+    path: `/api/board/tasks/${taskId}/comment?project=kiosk`,
     method: 'POST',
     headers: {
       Authorization: auth,

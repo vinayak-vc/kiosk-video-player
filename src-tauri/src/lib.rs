@@ -79,7 +79,8 @@ pub fn run() {
             commands::toggle_fullscreen,
             commands::get_platform,
             commands::check_storage_permission,
-            commands::request_storage_permission
+            commands::request_storage_permission,
+            commands::write_diagnostics
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -95,13 +95,25 @@ async function main() {
 
     const page = await context.newPage();
 
-    // Mock local thumbnail images and mp4
+    // Serve real Futurotec thumbnail images from disk
     await page.route('**/*.png', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'image/png',
-        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkWPjfDwAEeQHzE1d6rwAAAABJRU5ErkJggg==', 'base64')
-      });
+      const url = route.request().url();
+      const filename = decodeURIComponent(url.split('/').pop() || '');
+      const diskPath = path.join(ROOT_DIR, filename);
+      if (fs.existsSync(diskPath)) {
+        route.fulfill({
+          status: 200,
+          contentType: 'image/png',
+          body: fs.readFileSync(diskPath)
+        });
+      } else {
+        const fallback = path.join(ROOT_DIR, 'Adani - Centre of Excellence.png');
+        route.fulfill({
+          status: 200,
+          contentType: 'image/png',
+          body: fs.readFileSync(fallback)
+        });
+      }
     });
 
     await page.route('**/*.mp4', route => {
@@ -121,8 +133,12 @@ async function main() {
 
       HTMLMediaElement.prototype.play = function() {
         this.dispatchEvent(new Event('loadedmetadata'));
-        this.dispatchEvent(new Event('canplay'));
-        this.dispatchEvent(new Event('playing'));
+        setTimeout(() => {
+          this.dispatchEvent(new Event('canplay'));
+          this.dispatchEvent(new Event('playing'));
+          this.currentTime = 0.5;
+          this.dispatchEvent(new Event('timeupdate'));
+        }, 600);
         return Promise.resolve();
       };
     });

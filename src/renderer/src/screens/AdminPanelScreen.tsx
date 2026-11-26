@@ -25,6 +25,11 @@ import { performMediaScan } from '../services/startup';
 import { executeFolderChangeFlow } from '../services/folderChange';
 import type { MediaItem } from '../types';
 import { STRINGS } from '../strings';
+import {
+  computeVerdict,
+  buildDiagnosticsReportText,
+  runFullDiagnostics,
+} from '../services/DiagnosticsService';
 import styles from './AdminPanelScreen.module.css';
 
 interface AdminPanelScreenProps {
@@ -55,6 +60,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
 
   // Diagnostics state
   const [diagnosticsReport, setDiagnosticsReport] = useState<string | null>(null);
+  const [diagnosticsProgress, setDiagnosticsProgress] = useState<string | null>(null);
+  const [diagnosticsSavedPath, setDiagnosticsSavedPath] = useState<string | null>(null);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [copiedReport, setCopiedReport] = useState(false);
 
@@ -65,6 +72,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
   const handleRunDiagnostics = useCallback(async () => {
     setIsRunningDiagnostics(true);
     setCopiedReport(false);
+    setDiagnosticsSavedPath(null);
+    setDiagnosticsProgress('Initializing hardware & codec capability probes...');
     try {
       const videoEl = document.createElement('video');
       const codecs = [
@@ -80,45 +89,75 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
         { name: 'AAC Audio (audio/mp4; codecs="mp4a.40.2")', mime: 'audio/mp4; codecs="mp4a.40.2"' },
       ];
 
-      const codecResults = codecs
-        .map((c) => `  - ${c.name}: ${videoEl.canPlayType(c.mime) || 'no'}`)
-        .join('\n');
+      const codecCapabilities = codecs.map((c) => ({
+        name: c.name,
+        supported: videoEl.canPlayType(c.mime) || 'no',
+      }));
 
-      const lines: string[] = [
-        '=== KIOSK VIDEO PLAYER DIAGNOSTICS REPORT ===',
-        `Timestamp: ${new Date().toISOString()}`,
-        `Platform: ${bridge.platform.toUpperCase()}`,
-        `User-Agent: ${navigator.userAgent}`,
-        `Screen Resolution: ${window.screen?.width ?? 'unknown'}x${window.screen?.height ?? 'unknown'} (DPR: ${window.devicePixelRatio || 1})`,
-        `CSS Viewport: ${window.innerWidth}x${window.innerHeight}`,
-        '',
-        '--- CODEC HARDWARE CAPABILITY ---',
-        codecResults,
-        '',
-        '--- MEDIA LIBRARY SUMMARY ---',
-        `Active Media Root: ${config.kiosk_media_root}`,
-        `Playable Pairs: ${items.length}`,
-        `Screensaver Status: ${screensaver ? 'Present' : 'Missing'}`,
-        `Unmatched/Orphan Files: ${orphanCount}`,
-        `Scan Errors: ${scanErrors.length}`,
-      ];
+      // Real sequential probe for EVERY media clip + screensaver
+      const probeResults = await runFullDiagnostics(
+        items,
+        screensaver?.video_url,
+        (current, total, name) => {
+          setDiagnosticsProgress(`Probing clip [${current}/${total}]: ${name}...`);
+        }
+      );
 
-      if (items.length > 0) {
-        lines.push('', '--- MEDIA CLIPS PROBE (SAMPLE) ---');
-        const sample = items.slice(0, 3);
-        sample.forEach((item) => {
-          lines.push(`Clip: ${item.filename} (${(item.file_size / (1024 * 1024)).toFixed(1)} MB)`);
-          lines.push(`  URL: ${item.video_url}`);
-          lines.push(`  Status: Ready for hardware decoding`);
-        });
+      const verdict = computeVerdict(probeResults);
+
+      const initialReport = buildDiagnosticsReportText({
+        platform: bridge.platform,
+        userAgent: navigator.userAgent,
+        screenWidth: window.screen?.width ?? 'unknown',
+        screenHeight: window.screen?.height ?? 'unknown',
+        dpr: window.devicePixelRatio || 1,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        codecCapabilities,
+        mediaRoot: config.kiosk_media_root,
+        playablePairsCount: items.length,
+        screensaverStatus: screensaver ? 'Present' : 'Missing',
+        orphanCount,
+        scanErrorsCount: scanErrors.length,
+        clips: probeResults,
+        verdict,
+      });
+
+      // Persist report via allow-listed Rust command
+      let savedPath: string | undefined;
+      try {
+        savedPath = await bridge.writeDiagnostics(initialReport);
+        setDiagnosticsSavedPath(savedPath);
+      } catch (saveErr) {
+        savedPath = undefined;
+        console.warn('Failed to save diagnostics report to disk:', saveErr);
       }
 
-      lines.push('', '=== VERDICT: HARDWARE ACCELERATED PLAYBACK OPERATIONAL ===');
-      const finalReport = lines.join('\n');
+      const finalReport = buildDiagnosticsReportText({
+        platform: bridge.platform,
+        userAgent: navigator.userAgent,
+        screenWidth: window.screen?.width ?? 'unknown',
+        screenHeight: window.screen?.height ?? 'unknown',
+        dpr: window.devicePixelRatio || 1,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        codecCapabilities,
+        mediaRoot: config.kiosk_media_root,
+        playablePairsCount: items.length,
+        screensaverStatus: screensaver ? 'Present' : 'Missing',
+        orphanCount,
+        scanErrorsCount: scanErrors.length,
+        clips: probeResults,
+        verdict,
+        savedFilePath: savedPath,
+      });
+
       setDiagnosticsReport(finalReport);
+      setDiagnosticsProgress(null);
       void bridge.logClientMessage('INFO', `Hardware & Video Diagnostics executed:\n${finalReport}`);
     } catch (err) {
       setDiagnosticsReport(`Diagnostics error: ${String(err)}`);
+      setDiagnosticsProgress(null);
     } finally {
       setIsRunningDiagnostics(false);
     }
@@ -557,6 +596,44 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                   </button>
                 </div>
               </div>
+
+              {isRunningDiagnostics && diagnosticsProgress && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    margin: '10px 0',
+                    background: 'rgba(0, 150, 255, 0.15)',
+                    border: '1px solid rgba(0, 180, 255, 0.3)',
+                    borderRadius: '6px',
+                    color: '#60CDFF',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                  }}
+                  data-testid="admin-diagnostics-progress"
+                >
+                  <RefreshCw size={14} style={{ marginRight: '6px', verticalAlign: 'text-bottom', animation: 'spin 1s linear infinite' }} />
+                  {diagnosticsProgress}
+                </div>
+              )}
+
+              {diagnosticsSavedPath && (
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    margin: '8px 0',
+                    background: 'rgba(52, 199, 89, 0.15)',
+                    border: '1px solid rgba(52, 199, 89, 0.3)',
+                    borderRadius: '6px',
+                    color: '#30D158',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                  data-testid="admin-diagnostics-saved-path"
+                >
+                  <CheckCircle size={14} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
+                  Report saved to: <strong>{diagnosticsSavedPath}</strong>
+                </div>
+              )}
 
               {diagnosticsReport && (
                 <div

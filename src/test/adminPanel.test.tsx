@@ -36,7 +36,28 @@ vi.mock('../renderer/src/services/bridge', () => {
       exitApp: vi.fn(),
       logClientMessage: vi.fn().mockResolvedValue(undefined),
       convertFileSrc: vi.fn((path: string) => `kiosk-media://${path}`),
+      writeDiagnostics: vi.fn().mockResolvedValue('C:/Kiosk/diagnostics.txt'),
     },
+  };
+});
+
+vi.mock('../renderer/src/services/DiagnosticsService', async () => {
+  const actual = await vi.importActual<any>('../renderer/src/services/DiagnosticsService');
+  return {
+    ...actual,
+    runFullDiagnostics: vi.fn().mockResolvedValue([
+      {
+        name: 'clip1.mp4',
+        url: 'kiosk-media://clip1.mp4',
+        status: 'PASS',
+        width: 1920,
+        height: 1080,
+        duration: 30,
+        firstFrameLatencyMs: 40,
+        droppedFrames: 0,
+        seekLatencyMs: 12,
+      },
+    ]),
   };
 });
 

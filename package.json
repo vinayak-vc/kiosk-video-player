@@ -1,7 +1,7 @@
 {
   "name": "kiosk-video-player",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,8 @@
     "dist": "tauri build",
     "android:dev": "tauri android dev",
     "android:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-build.ps1",
-    "android:install": "powershell -NoProfile -Command \"$adb = Join-Path $(if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA 'Android\\Sdk' }) 'platform-tools\\adb.exe'; & $adb wait-for-device; & $adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk\""
+    "android:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-build.ps1 -Release",
+    "android:install": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-android.ps1"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

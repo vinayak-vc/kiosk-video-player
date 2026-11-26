@@ -142,6 +142,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
       <video
         ref={videoRef}
         className={styles.videoElement}
+        poster={item.thumbnail_url}
         preload="auto"
         playsInline
         data-testid="kiosk-video-element"

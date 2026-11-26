@@ -1,6 +1,6 @@
 [package]
 name = "kiosk-video-player"
-version = "0.1.0"
+version = "1.0.0"
 description = "Animated Windows Kiosk Video Player"
 authors = ["Viitor"]
 edition = "2024"
