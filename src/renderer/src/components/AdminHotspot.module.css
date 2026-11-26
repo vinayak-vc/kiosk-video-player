@@ -2,12 +2,11 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 90px;
-  height: 90px;
-  z-index: 9999;
+  width: 120px;
+  height: 120px;
   background: transparent;
-  cursor: default;
+  pointer-events: none; /* Never intercepts or blocks any elements underneath (e.g. Back button) */
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
 }
+

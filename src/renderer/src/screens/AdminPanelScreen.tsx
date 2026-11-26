@@ -214,16 +214,22 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                type="button"
-                className={styles.btnSecondary}
-                onClick={handlePickFolder}
-                data-testid="admin-pick-folder-button"
-              >
-                <Folder size={16} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
-                Browse System Folder
-              </button>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {bridge.platform !== 'android' ? (
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={handlePickFolder}
+                  data-testid="admin-pick-folder-button"
+                >
+                  <Folder size={16} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
+                  Browse System Folder
+                </button>
+              ) : (
+                <div className={styles.androidFolderHint} data-testid="admin-android-hint">
+                  Copy files to <code>/storage/emulated/0/Kiosk/Media</code> or configure <code>KIOSK_MEDIA_ROOT</code> in kiosk.env
+                </div>
+              )}
               <button
                 type="button"
                 className={styles.btnSecondary}
@@ -449,7 +455,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
         <div className={styles.modalBackdrop} data-testid="admin-exit-modal">
           <div className={styles.modalBox}>
             <h2>Exit Kiosk Application?</h2>
-            <p>Are you sure you want to exit Kiosk mode and return to the system desktop/launcher?</p>
+            <p>
+              {bridge.platform === 'android'
+                ? 'Are you sure you want to exit Kiosk mode? This will stop kiosk lock and close the application to return to the Android launcher.'
+                : 'Are you sure you want to exit Kiosk mode and return to the system desktop?'}
+            </p>
             <div className={styles.modalActions}>
               <button
                 type="button"

@@ -102,7 +102,8 @@ describe('IdleTimerService (P5-1)', () => {
     // Advance 7s of 10s, then tap -> resets timer to full 10s
     act(() => {
       vi.advanceTimersByTime(7000);
-      fireEvent.pointerDown(window);
+      fireEvent.pointerDown(window, { clientX: 500, clientY: 500 });
+      fireEvent.pointerUp(window, { clientX: 500, clientY: 500 });
     });
     expect(useApplicationStore.getState().state).toBe('GALLERY');
 
