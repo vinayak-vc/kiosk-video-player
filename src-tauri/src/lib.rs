@@ -13,10 +13,21 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             let app_handle = app.handle().clone();
-            if let Ok(logger) = Logger::new(&app_handle) {
-                app.manage(logger);
+            match Logger::new(&app_handle) {
+                Ok(logger) => {
+                    app.manage(logger);
+                }
+                Err(err) => {
+                    eprintln!("[FATAL] Failed to initialize logger: {}", err);
+                    return Err(Box::new(std::io::Error::other(err)));
+                }
             }
-            let _ = window::setup_kiosk_window(&app_handle);
+
+            if let Err(err) = window::setup_kiosk_window(&app_handle) {
+                eprintln!("[ERROR] Kiosk window configuration failed: {}", err);
+                return Err(Box::new(std::io::Error::other(err)));
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
