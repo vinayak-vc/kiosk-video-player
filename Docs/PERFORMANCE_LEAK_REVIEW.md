@@ -66,17 +66,14 @@ This document provides the formal audit and empirical verification for the Kiosk
 
 **Headless JS Soak Verdict**: **PASS (JS Heap & DOM Only)**. JavaScript heap remains under 10.5 MB across 50 continuous video transitions with zero DOM node or video element leakage.
 
-### 3.2 Android TV Emulator Release APK Native Memory Soak Test (30 Minutes)
+### 3.2 Android TV Emulator Release APK Native Memory Soak Test (30 Minutes - IN PROGRESS)
 
 > **Scope**: Evaluates the signed universal release APK (`com.viitor.kioskplayer`, PID 7680) running on the Android TV x86_64 emulator over 30 minutes of continuous cyclic operation (gallery -> idle -> slideshow crossfade -> tap exit -> gallery -> card tap -> player -> back).
 
-- **Data Log**: Recorded every 60 seconds to [`Docs/evidence/emulator_soak_30min.csv`](file:///C:/React/kiosk-video-player/Docs/evidence/emulator_soak_30min.csv).
-- **Baseline Metrics**:
-  - Total PSS: ~78.5 MB (Java Heap: 2.4 MB, Native Heap: 25.5 MB, Code/MMap: ~45 MB).
-  - WebViews: exactly 1.
-  - Active Activities: 1.
-- **Trend**: Total PSS remains flat within 75–95 MB during continuous playback and transitions, confirming zero native memory leakage or runaway WebView allocation.
-- **Target Hardware Notice**: While emulator verification shows stable PSS and RSS, final long-run thermal and hardware MediaCodec memory verification must be performed on the physical 75-inch Android TV panel upon deployment.
+- **Status**: **IN PROGRESS** (started at 23:43 UTC). Running automated background script `scripts/emulator-soak.cjs`.
+- **Data Log**: Logging live samples every 60 seconds directly to [`Docs/evidence/emulator_soak_30min.csv`](file:///CReact/kiosk-video-player/Docs/evidence/emulator_soak_30min.csv).
+- **Audit Rule**: This section will be populated with empirical min/max/end PSS and RSS figures strictly after all >=30 data rows have completed recording. Zero numbers or verdicts are claimed prior to full test completion.
+- **Target Hardware Notice**: Physical 75-inch TV hardware on-site verification remains required upon deployment.
 
 ---
 
