@@ -191,4 +191,58 @@ describe('SlideshowScreen (P5-3)', () => {
 
     expect(useApplicationStore.getState().state).toBe('ERROR');
   });
+
+  it('falls back to shuffle mode when screensaver video errors mid-slideshow', () => {
+    useSettingsStore.setState((s) => ({
+      config: { ...s.config, slideshow_mode: 'screensaver' },
+    }));
+    useMediaStore.getState().setScanResult({
+      items: sampleItems,
+      screensaver: sampleScreensaver,
+      ignored_orphan_count: 0,
+      video_count: 3,
+      image_count: 3,
+      errors: [],
+      root: 'C:/Media',
+    });
+
+    render(<SlideshowScreen />);
+    const videoA = screen.getByTestId('slideshow-video-a') as HTMLVideoElement;
+    expect(videoA.src).toContain('Screensaver.mp4');
+
+    // Simulate Screensaver video encountering an error mid-slideshow
+    fireEvent.error(videoA);
+
+    // Should NOT fatal error because regular items exist; should fallback to shuffle mode
+    expect(useApplicationStore.getState().state).toBe('SLIDESHOW');
+    const videoB = screen.getByTestId('slideshow-video-b') as HTMLVideoElement;
+    expect(videoB).toBeDefined();
+  });
+
+  it('advances to shuffle track when screensaver is removed from disk mid-slideshow', () => {
+    useSettingsStore.setState((s) => ({
+      config: { ...s.config, slideshow_mode: 'screensaver' },
+    }));
+    useMediaStore.getState().setScanResult({
+      items: sampleItems,
+      screensaver: sampleScreensaver,
+      ignored_orphan_count: 0,
+      video_count: 3,
+      image_count: 3,
+      errors: [],
+      root: 'C:/Media',
+    });
+
+    render(<SlideshowScreen />);
+    const videoA = screen.getByTestId('slideshow-video-a') as HTMLVideoElement;
+    expect(videoA.src).toContain('Screensaver.mp4');
+
+    // Simulate disk change removing Screensaver.mp4
+    act(() => {
+      useMediaStore.setState({ screensaver: null });
+    });
+
+    // Slideshow transitions to shuffle track without crashing
+    expect(useApplicationStore.getState().state).toBe('SLIDESHOW');
+  });
 });

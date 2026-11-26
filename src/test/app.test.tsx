@@ -135,4 +135,58 @@ describe('App kiosk key guard & shortcuts', () => {
 
     removeSpy.mockRestore();
   });
+
+  it('exits individual player when active video is deleted from disk on media change', async () => {
+    const { handleMediaChangedEvent } = await import('../renderer/src/services/startup');
+    const { usePlayerStore } = await import('../renderer/src/stores/playerStore');
+
+    useApplicationStore.setState({ state: 'INDIVIDUAL_PLAYER', previousState: 'GALLERY' });
+    usePlayerStore.setState({ selectedMediaId: 'deleted-video' });
+
+    // Mock new scan that does NOT contain 'deleted-video'
+    vi.mocked(bridge.getMediaItems).mockResolvedValueOnce({
+      items: [
+        {
+          id: 'other-video',
+          filename: 'other-video',
+          display_title: 'Other Video',
+          video_path: 'C:/Kiosk/Media/other-video.mp4',
+          thumbnail_path: 'C:/Kiosk/Media/other-video.png',
+          video_url: 'kiosk-media://video/other-video.mp4',
+          thumbnail_url: 'kiosk-media://thumb/other-video.png',
+          file_size: 1024,
+        },
+      ],
+      ignored_orphan_count: 0,
+      video_count: 1,
+      image_count: 1,
+      errors: [],
+      root: 'C:/Kiosk/Media',
+    });
+
+    await handleMediaChangedEvent();
+
+    expect(usePlayerStore.getState().selectedMediaId).toBeNull();
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+  });
+
+  it('detects Android storage permission revocation on focus and returns to gallery', async () => {
+    (bridge as { platform: string }).platform = 'android';
+    (bridge as { checkStoragePermission?: () => Promise<boolean> }).checkStoragePermission = vi.fn().mockResolvedValue(false);
+
+    useApplicationStore.setState({ state: 'INDIVIDUAL_PLAYER', storagePermissionDenied: false });
+
+    render(<App />);
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(useApplicationStore.getState().storagePermissionDenied).toBe(true);
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+
+    // Clean up
+    (bridge as { platform: string }).platform = 'windows';
+    delete (bridge as { checkStoragePermission?: () => Promise<boolean> }).checkStoragePermission;
+  });
 });

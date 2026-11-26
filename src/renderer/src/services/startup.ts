@@ -69,9 +69,31 @@ export async function executeStartup(isMounted: () => boolean = () => true): Pro
 
 export async function handleMediaChangedEvent(): Promise<void> {
   const cardsPerPage = useSettingsStore.getState().config.cards_per_page;
-  const scan = await useMediaStore.getState().refresh(cardsPerPage);
-  const activeId = usePlayerStore.getState().selectedMediaId;
-  if (activeId && scan && !scan.items.some((item) => item.id === activeId)) {
-    void bridge.logClientMessage('WARN', `Active media '${activeId}' was removed on disk`).catch(() => {});
+  try {
+    const scan = await useMediaStore.getState().refresh(cardsPerPage);
+    const activeId = usePlayerStore.getState().selectedMediaId;
+    const curState = useApplicationStore.getState().state;
+
+    // If active video was deleted or whole folder was wiped/unplugged during playback
+    if (curState === 'INDIVIDUAL_PLAYER' && activeId) {
+      const stillExists = scan && scan.items.some((item) => item.id === activeId);
+      if (!stillExists) {
+        void bridge
+          .logClientMessage('WARN', `Active media '${activeId}' was removed on disk during playback`)
+          .catch(() => {});
+        usePlayerStore.getState().clearSelection();
+        useApplicationStore.getState().dispatch('PLAYER_EXIT');
+      }
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    void bridge
+      .logClientMessage('ERROR', `Media refresh failed on folder change: ${msg}`)
+      .catch(() => {});
+    const curState = useApplicationStore.getState().state;
+    if (curState === 'INDIVIDUAL_PLAYER') {
+      usePlayerStore.getState().clearSelection();
+      useApplicationStore.getState().dispatch('PLAYER_EXIT');
+    }
   }
 }

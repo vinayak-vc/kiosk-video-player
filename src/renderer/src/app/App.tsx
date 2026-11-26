@@ -128,7 +128,6 @@ export const App: React.FC = () => {
     const handleResumePermissionCheck = () => {
       if (
         bridge.platform !== 'android' ||
-        !useApplicationStore.getState().storagePermissionDenied ||
         typeof bridge.checkStoragePermission !== 'function'
       ) {
         return;
@@ -136,10 +135,27 @@ export const App: React.FC = () => {
       void bridge
         .checkStoragePermission()
         .then((granted) => {
-          if (granted && mounted) {
-            useApplicationStore.getState().setStoragePermissionDenied(false);
-            useApplicationStore.getState().dispatch('SCAN_START');
-            return performMediaScan();
+          if (!mounted) return;
+          const wasDenied = useApplicationStore.getState().storagePermissionDenied;
+          if (granted) {
+            if (wasDenied) {
+              useApplicationStore.getState().setStoragePermissionDenied(false);
+              useApplicationStore.getState().dispatch('SCAN_START');
+              return performMediaScan();
+            }
+          } else {
+            // Permission revoked at runtime via system settings
+            if (!wasDenied) {
+              useApplicationStore.getState().setStoragePermissionDenied(true);
+              const curState = useApplicationStore.getState().state;
+              if (curState === 'INDIVIDUAL_PLAYER') {
+                usePlayerStore.getState().clearSelection();
+                useApplicationStore.getState().dispatch('PLAYER_EXIT');
+              } else if (curState === 'SLIDESHOW') {
+                useApplicationStore.getState().dispatch('SLIDESHOW_TAP');
+              }
+              useMediaStore.getState().reset();
+            }
           }
           return undefined;
         })

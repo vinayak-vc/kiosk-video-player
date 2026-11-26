@@ -4,6 +4,7 @@ import { AudioService } from '../services/AudioService';
 import { bridge } from '../services/bridge';
 import {
   SlideshowController,
+  SCREENSAVER_TRACK_ID,
   type SlideshowMode,
   type SlideshowTrack,
 } from '../services/SlideshowController';
@@ -78,113 +79,6 @@ export const SlideshowScreen: React.FC = () => {
     [clearTimers, releaseAllVideos, dispatch]
   );
 
-  // Initialize controller on mount
-  useEffect(() => {
-    exitingRef.current = false;
-    AudioService.play('slideshowTransition');
-
-    const controller = new SlideshowController({
-      mode: slideshowMode,
-      items,
-      screensaver,
-      screensaverSound,
-      onWarn: (msg) => {
-        void bridge.logClientMessage('WARN', msg).catch(() => {});
-      },
-      onAllFailed: handleFatalNoMedia,
-    });
-    controllerRef.current = controller;
-
-    const first = controller.next();
-    setEffectiveMode(controller.getEffectiveMode());
-    if (first) {
-      setActiveSlot('a');
-      setSlotATrack(first);
-      setSlotBTrack(null);
-    }
-
-    return () => {
-      clearTimers();
-      releaseAllVideos();
-      controllerRef.current = null;
-    };
-    // Run once on mount; live media/config updates are pushed via updateConfigAndMedia below
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Propagate live media or config updates while in slideshow
-  useEffect(() => {
-    const controller = controllerRef.current;
-    if (!controller) return;
-    controller.updateConfigAndMedia({
-      mode: slideshowMode,
-      items,
-      screensaver,
-      screensaverSound,
-    });
-    setEffectiveMode(controller.getEffectiveMode());
-  }, [slideshowMode, items, screensaver, screensaverSound]);
-
-  // Stall watchdog for active video
-  useEffect(() => {
-    if (stallTimerRef.current !== null) {
-      clearInterval(stallTimerRef.current);
-      stallTimerRef.current = null;
-    }
-    lastTimeRef.current = -1;
-    lastProgressAtRef.current = Date.now();
-
-    stallTimerRef.current = setInterval(() => {
-      if (exitingRef.current) return;
-      const activeVideo = activeSlot === 'a' ? videoARef.current : videoBRef.current;
-      const activeTrack = activeSlot === 'a' ? slotATrack : slotBTrack;
-      if (!activeVideo || !activeTrack) return;
-
-      const cur = activeVideo.currentTime;
-      if (cur !== lastTimeRef.current) {
-        lastTimeRef.current = cur;
-        lastProgressAtRef.current = Date.now();
-        return;
-      }
-
-      if (Date.now() - lastProgressAtRef.current >= STALL_TIMEOUT_MS) {
-        void bridge
-          .logClientMessage('WARN', `Slideshow video stalled: ${activeTrack.title}`)
-          .catch(() => {});
-        const controller = controllerRef.current;
-        if (!controller) return;
-        controller.markFailed(activeTrack.id);
-        const replacement = controller.next();
-        setEffectiveMode(controller.getEffectiveMode());
-        if (replacement) {
-          if (activeSlot === 'a') {
-            setSlotATrack(replacement);
-          } else {
-            setSlotBTrack(replacement);
-          }
-          lastProgressAtRef.current = Date.now();
-        }
-      }
-    }, STALL_CHECK_INTERVAL_MS);
-
-    return () => {
-      if (stallTimerRef.current !== null) {
-        clearInterval(stallTimerRef.current);
-        stallTimerRef.current = null;
-      }
-    };
-  }, [activeSlot, slotATrack, slotBTrack]);
-
-  // Autoplay newly assigned active slot
-  useEffect(() => {
-    const activeVideo = activeSlot === 'a' ? videoARef.current : videoBRef.current;
-    const activeTrack = activeSlot === 'a' ? slotATrack : slotBTrack;
-    if (!activeVideo || !activeTrack) return;
-
-    activeVideo.muted = activeTrack.muted;
-    void Promise.resolve(activeVideo.play()).catch(() => {});
-  }, [activeSlot, slotATrack, slotBTrack]);
-
   const advanceToNextTrack = useCallback(
     (fromSlot: 'a' | 'b') => {
       if (exitingRef.current) return;
@@ -247,27 +141,6 @@ export const SlideshowScreen: React.FC = () => {
     []
   );
 
-  const handleVideoEnded = useCallback(
-    (slot: 'a' | 'b') => {
-      if (exitingRef.current) return;
-      const track = slot === 'a' ? slotATrack : slotBTrack;
-      const video = slot === 'a' ? videoARef.current : videoBRef.current;
-      if (!track) return;
-
-      // In screensaver mode, loop attribute handles seamless repeat; fallback restarts if 'ended' still fires
-      if (track.isScreensaver && video) {
-        video.currentTime = 0;
-        void Promise.resolve(video.play()).catch(() => {});
-        return;
-      }
-
-      if (slot === activeSlot) {
-        advanceToNextTrack(slot);
-      }
-    },
-    [activeSlot, slotATrack, slotBTrack, advanceToNextTrack]
-  );
-
   const handleVideoError = useCallback(
     (slot: 'a' | 'b') => {
       if (exitingRef.current) return;
@@ -279,10 +152,166 @@ export const SlideshowScreen: React.FC = () => {
         .logClientMessage('WARN', `Slideshow playback error on '${track.title}'`)
         .catch(() => {});
       controller.markFailed(track.id);
+      setEffectiveMode(controller.getEffectiveMode());
       advanceToNextTrack(slot);
     },
     [slotATrack, slotBTrack, advanceToNextTrack]
   );
+
+  const handleVideoEnded = useCallback(
+    (slot: 'a' | 'b') => {
+      if (exitingRef.current) return;
+      const track = slot === 'a' ? slotATrack : slotBTrack;
+      const video = slot === 'a' ? videoARef.current : videoBRef.current;
+      if (!track) return;
+
+      // In screensaver mode, loop attribute handles seamless repeat; fallback restarts if 'ended' still fires
+      if (track.isScreensaver && video) {
+        video.currentTime = 0;
+        void Promise.resolve(video.play()).catch(() => {
+          if (exitingRef.current) return;
+          handleVideoError(slot);
+        });
+        return;
+      }
+
+      if (slot === activeSlot) {
+        advanceToNextTrack(slot);
+      }
+    },
+    [activeSlot, slotATrack, slotBTrack, advanceToNextTrack, handleVideoError]
+  );
+
+  // Initialize controller on mount
+  useEffect(() => {
+    exitingRef.current = false;
+    AudioService.play('slideshowTransition');
+
+    const controller = new SlideshowController({
+      mode: slideshowMode,
+      items,
+      screensaver,
+      screensaverSound,
+      onWarn: (msg) => {
+        void bridge.logClientMessage('WARN', msg).catch(() => {});
+      },
+      onAllFailed: handleFatalNoMedia,
+    });
+    controllerRef.current = controller;
+
+    const first = controller.next();
+    setEffectiveMode(controller.getEffectiveMode());
+    if (first) {
+      setActiveSlot('a');
+      setSlotATrack(first);
+      setSlotBTrack(null);
+    }
+
+    return () => {
+      clearTimers();
+      releaseAllVideos();
+      controllerRef.current = null;
+    };
+    // Run once on mount; live media/config updates are pushed via updateConfigAndMedia below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Propagate live media or config updates while in slideshow
+  useEffect(() => {
+    const controller = controllerRef.current;
+    if (!controller) return;
+    controller.updateConfigAndMedia({
+      mode: slideshowMode,
+      items,
+      screensaver,
+      screensaverSound,
+    });
+    setEffectiveMode(controller.getEffectiveMode());
+
+    // If active track was screensaver and screensaver was removed on disk mid-slideshow
+    if (activeSlot === 'a' && slotATrack?.isScreensaver && !screensaver) {
+      void bridge
+        .logClientMessage('WARN', 'Screensaver removed from disk mid-slideshow; transitioning to shuffle')
+        .catch(() => {});
+      controller.markFailed(SCREENSAVER_TRACK_ID);
+      setEffectiveMode(controller.getEffectiveMode());
+      advanceToNextTrack('a');
+    }
+  }, [slideshowMode, items, screensaver, screensaverSound, activeSlot, slotATrack, advanceToNextTrack]);
+
+  // Stall watchdog for active video
+  useEffect(() => {
+    if (stallTimerRef.current !== null) {
+      clearInterval(stallTimerRef.current);
+      stallTimerRef.current = null;
+    }
+    lastTimeRef.current = -1;
+    lastProgressAtRef.current = Date.now();
+
+    stallTimerRef.current = setInterval(() => {
+      if (exitingRef.current) return;
+      const activeVideo = activeSlot === 'a' ? videoARef.current : videoBRef.current;
+      const activeTrack = activeSlot === 'a' ? slotATrack : slotBTrack;
+      if (!activeVideo || !activeTrack) return;
+
+      const cur = activeVideo.currentTime;
+      if (cur !== lastTimeRef.current) {
+        lastTimeRef.current = cur;
+        lastProgressAtRef.current = Date.now();
+        return;
+      }
+
+      if (Date.now() - lastProgressAtRef.current >= STALL_TIMEOUT_MS) {
+        void bridge
+          .logClientMessage('WARN', `Slideshow video stalled: ${activeTrack.title}`)
+          .catch(() => {});
+        const controller = controllerRef.current;
+        if (!controller) return;
+        controller.markFailed(activeTrack.id);
+        const replacement = controller.next();
+        setEffectiveMode(controller.getEffectiveMode());
+        if (replacement) {
+          if (activeSlot === 'a') {
+            setSlotATrack(replacement);
+          } else {
+            setSlotBTrack(replacement);
+          }
+          lastProgressAtRef.current = Date.now();
+        }
+      }
+    }, STALL_CHECK_INTERVAL_MS);
+
+    return () => {
+      if (stallTimerRef.current !== null) {
+        clearInterval(stallTimerRef.current);
+        stallTimerRef.current = null;
+      }
+    };
+  }, [activeSlot, slotATrack, slotBTrack]);
+
+  // Autoplay newly assigned active slot with muted retry on browser/webview rejection
+  useEffect(() => {
+    const activeVideo = activeSlot === 'a' ? videoARef.current : videoBRef.current;
+    const activeTrack = activeSlot === 'a' ? slotATrack : slotBTrack;
+    if (!activeVideo || !activeTrack) return;
+
+    activeVideo.muted = activeTrack.muted;
+    void Promise.resolve(activeVideo.play()).catch(() => {
+      if (exitingRef.current) return;
+      // If unmuted autoplay fails, retry muted per [C-29] carry-forward
+      if (!activeVideo.muted) {
+        void bridge
+          .logClientMessage('WARN', `Autoplay rejected for '${activeTrack.title}', retrying muted`)
+          .catch(() => {});
+        activeVideo.muted = true;
+        void Promise.resolve(activeVideo.play()).catch(() => {
+          handleVideoError(activeSlot);
+        });
+      } else {
+        handleVideoError(activeSlot);
+      }
+    });
+  }, [activeSlot, slotATrack, slotBTrack, handleVideoError]);
 
   const handleTapExit = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
