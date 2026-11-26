@@ -2,6 +2,7 @@ import React, { useCallback, useEffect } from 'react';
 import { LayoutGroup } from 'framer-motion';
 import { Stage } from '../components/Stage';
 import { bridge } from '../services/bridge';
+import { IdleTimerService } from '../services/IdleTimerService';
 import { executeStartup, handleMediaChangedEvent, performMediaScan } from '../services/startup';
 import { useApplicationStore } from '../stores/applicationStore';
 import { useMediaStore } from '../stores/mediaStore';
@@ -21,11 +22,14 @@ export const App: React.FC = () => {
   const storagePermissionDenied = useApplicationStore((s) => s.storagePermissionDenied);
   const dispatch = useApplicationStore((s) => s.dispatch);
   const items = useMediaStore((s) => s.items);
+  const screensaver = useMediaStore((s) => s.screensaver);
   const selectedMediaId = usePlayerStore((s) => s.selectedMediaId);
+  const isPlayerPlaying = usePlayerStore((s) => s.isPlaying);
   const mediaRoot = useMediaStore((s) => s.root);
   const videoCount = useMediaStore((s) => s.videoCount);
   const imageCount = useMediaStore((s) => s.imageCount);
   const configRoot = useSettingsStore((s) => s.config.kiosk_media_root);
+  const idleTimeoutSeconds = useSettingsStore((s) => s.config.idle_timeout_seconds);
 
   const handleRetryScan = useCallback(async () => {
     const curState = useApplicationStore.getState().state;
@@ -158,6 +162,41 @@ export const App: React.FC = () => {
       unlistenMedia.then((fn) => fn()).catch(() => {});
     };
   }, []);
+
+  // 3. Centralized IdleTimerService lifecycle tied to state machine & playback
+  useEffect(() => {
+    const canRunSlideshow = items.length > 0 || Boolean(screensaver);
+    const shouldArm =
+      canRunSlideshow &&
+      (appState === 'GALLERY' || (appState === 'INDIVIDUAL_PLAYER' && !isPlayerPlaying));
+
+    if (!shouldArm) {
+      IdleTimerService.stop();
+      return () => {
+        IdleTimerService.stop();
+      };
+    }
+
+    IdleTimerService.start(idleTimeoutSeconds, () => {
+      if (useApplicationStore.getState().state === 'INDIVIDUAL_PLAYER') {
+        usePlayerStore.getState().clearSelection();
+      }
+      useApplicationStore.getState().dispatch('IDLE_TIMEOUT', { lockDurationMs: 450 });
+    });
+
+    const resetOnActivity = () => {
+      IdleTimerService.reset();
+    };
+
+    window.addEventListener('pointerdown', resetOnActivity, true);
+    window.addEventListener('keydown', resetOnActivity, true);
+
+    return () => {
+      window.removeEventListener('pointerdown', resetOnActivity, true);
+      window.removeEventListener('keydown', resetOnActivity, true);
+      IdleTimerService.stop();
+    };
+  }, [appState, isPlayerPlaying, idleTimeoutSeconds, items.length, screensaver]);
 
   const selectFolderHandler =
     bridge.platform === 'android' ? undefined : handleSelectFolder;
