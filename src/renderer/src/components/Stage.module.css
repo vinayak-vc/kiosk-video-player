@@ -1,0 +1,24 @@
+.viewportContainer {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000000;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.stageCanvas {
+  width: var(--stage-width, 1920px);
+  height: var(--stage-height, 1080px);
+  transform-origin: center center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at top, var(--bg-secondary) 0%, var(--bg-primary) 70%);
+  box-shadow: 0 0 50px var(--glow-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  touch-action: none;
+}

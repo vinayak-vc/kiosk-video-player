@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import styles from './Stage.module.css';
 
 interface StageProps {
   children: React.ReactNode;
@@ -26,29 +27,12 @@ export const Stage: React.FC<StageProps> = ({ children }) => {
   }, []);
 
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#000000',
-        overflow: 'hidden',
-      }}
-    >
+    <div className={styles.viewportContainer}>
       <div
         data-testid="stage-container"
+        className={styles.stageCanvas}
         style={{
-          width: 1920,
-          height: 1080,
           transform: `scale(${scale})`,
-          transformOrigin: 'center center',
-          flexShrink: 0,
-          position: 'relative',
-          overflow: 'hidden',
-          background: 'radial-gradient(ellipse at top, #0d163d 0%, #050814 70%)',
-          boxShadow: '0 0 50px rgba(0, 128, 255, 0.2)',
         }}
       >
         {children}
