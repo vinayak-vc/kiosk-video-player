@@ -12,7 +12,7 @@ vi.mock('../renderer/src/services/bridge', () => ({
   bridge: {
     platform: 'windows',
     logClientMessage: vi.fn().mockResolvedValue(undefined),
-    validateMediaFolder: vi.fn().mockResolvedValue('C:/Validated/Media'),
+    validateMediaFolder: vi.fn().mockImplementation(async (p: string) => p),
     pickMediaFolder: vi.fn().mockResolvedValue('C:/Picked/Media'),
     exitApp: vi.fn().mockResolvedValue(undefined),
   },

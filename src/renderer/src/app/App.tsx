@@ -4,6 +4,7 @@ import { Stage } from '../components/Stage';
 import { bridge } from '../services/bridge';
 import { IdleTimerService } from '../services/IdleTimerService';
 import { executeStartup, handleMediaChangedEvent, performMediaScan } from '../services/startup';
+import { executeFolderChangeFlow } from '../services/folderChange';
 import { useApplicationStore } from '../stores/applicationStore';
 import { useMediaStore } from '../stores/mediaStore';
 import { usePlayerStore } from '../stores/playerStore';
@@ -46,9 +47,7 @@ export const App: React.FC = () => {
     try {
       const picked = await bridge.pickMediaFolder();
       if (!picked) return;
-      const updated = await useSettingsStore.getState().setMediaRoot(picked);
-      useApplicationStore.getState().dispatch('SCAN_START');
-      await performMediaScan(updated.cards_per_page);
+      await executeFolderChangeFlow(picked);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       useApplicationStore.getState().dispatch('FATAL_ERROR', { errorReason: msg });

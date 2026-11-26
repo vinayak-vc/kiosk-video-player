@@ -19,6 +19,7 @@ import { useApplicationStore } from '../stores/applicationStore';
 import { useMediaStore } from '../stores/mediaStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { performMediaScan } from '../services/startup';
+import { executeFolderChangeFlow } from '../services/folderChange';
 import type { MediaItem } from '../types';
 import styles from './AdminPanelScreen.module.css';
 
@@ -76,15 +77,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
   const applyFolderChange = async (targetPath: string) => {
     setIsRescanning(true);
     setFeedback(null);
-    try {
-      const updated = await useSettingsStore.getState().setMediaRoot(targetPath);
-      setFeedback({ type: 'success', message: `Media folder updated to: ${updated.kiosk_media_root}` });
-      await performMediaScan(updated.cards_per_page);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setFeedback({ type: 'error', message: `Folder change failed: ${msg}` });
-    } finally {
-      setIsRescanning(false);
+    const result = await executeFolderChangeFlow(targetPath);
+    setIsRescanning(false);
+    if (result.success && result.config) {
+      setFeedback({ type: 'success', message: `Media folder updated to: ${result.config.kiosk_media_root}` });
+    } else {
+      setFeedback({ type: 'error', message: result.error || 'Folder change failed' });
     }
   };
 
