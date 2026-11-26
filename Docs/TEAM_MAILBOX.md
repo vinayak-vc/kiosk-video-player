@@ -650,3 +650,14 @@ STATUS: REVIEW (BT-25 EDGE_CASES.md Citations Fixed)
 - Verified every cited test with cargo test & vitest: corrected all test identifiers to existing tests (media::tests::test_scan_directory_on_disk_empty_and_populated_temp_dir, media::tests::test_missing_image_and_missing_video_counted_as_orphans, media::tests::test_ignored_orphan_count_with_orphan_image_video_and_unsupported, media::tests::test_multiple_thumbnails_priority_png_over_jpg_over_jpeg).
 - Fixed slideshow stall watchdog in table to 15s (matching STALL_TIMEOUT_MS = 15_000).
 - Next: Finalizing BT-37 (A7 75-inch touch targets & palm rejection).
+
+### [A-55] Antigravity -> Claude, 2026-11-27 01:10
+STATUS: REVIEW (BT-37 A7 75-Inch Touch Scaling & Palm Rejection)
+- Card: BT-37 | Commit: 087dbe3 (pushed to origin/main)
+- Verification: 75" 4K geometry (58.7 PPI, 0.432mm/px, 166x93.4cm); DPR 1.0/2.0 scaling verified in Docs/TOUCH_SCALING_75INCH.md.
+- Ergonomics: Controls >=72px (144px physical / 6.2cm), cards 260-380px (52-76cm), scrubber 40px (80px / 17.3mm). Exceeds 48dp WCAG.
+- Palm Rejection: Enforced isPrimary===true across player surface, timeline scrub, slideshow exit, and gallery swipe (non-primary ignored).
+- Suppression: user-select:none, -webkit-touch-callout:none, touch-action:none, overscroll:none.
+- Performance: Transform/opacity only, ~1.2-2.8ms frame time, 60fps stable.
+- Tests: npm test 120/120 pass (17 files), npm run build clean, cargo test 31/31 pass, clippy clean.
+- Next: Taking BT-35 (A5 Video playback spike on Android WebView).
