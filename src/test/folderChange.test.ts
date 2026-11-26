@@ -138,4 +138,22 @@ describe('executeFolderChangeFlow (BT-24 / P6-2)', () => {
     expect(useApplicationStore.getState().state).toBe('ERROR');
     expect(useApplicationStore.getState().errorReason).toContain('I/O read error');
   });
+
+  it('blocks concurrent in-flight folder changes', async () => {
+    let resolveValidate: (p: string) => void;
+    vi.mocked(bridge.validateMediaFolder).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveValidate = resolve;
+    }));
+
+    const firstPromise = executeFolderChangeFlow('C:/Folder1');
+    const secondPromise = executeFolderChangeFlow('C:/Folder2');
+
+    const secondResult = await secondPromise;
+    expect(secondResult.success).toBe(false);
+    expect(secondResult.error).toContain('already in progress');
+
+    resolveValidate!('C:/Folder1');
+    const firstResult = await firstPromise;
+    expect(firstResult.success).toBe(true);
+  });
 });
