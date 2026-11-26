@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, act } from '@testing-library/react';
 import { App } from '../renderer/src/app/App';
 import { bridge } from '../renderer/src/services/bridge';
+import { useApplicationStore } from '../renderer/src/stores/applicationStore';
+import { useMediaStore } from '../renderer/src/stores/mediaStore';
+import { useSettingsStore, DEFAULT_APP_CONFIG } from '../renderer/src/stores/settingsStore';
 
 vi.mock('../renderer/src/services/bridge', () => ({
   bridge: {
@@ -11,6 +14,7 @@ vi.mock('../renderer/src/services/bridge', () => ({
     logClientMessage: vi.fn().mockResolvedValue(undefined),
     getAppConfig: vi.fn(),
     getMediaItems: vi.fn(),
+    setMediaRoot: vi.fn(),
     onMediaChanged: vi.fn().mockResolvedValue(() => {}),
   },
 }));
@@ -18,6 +22,16 @@ vi.mock('../renderer/src/services/bridge', () => ({
 describe('App kiosk key guard & shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useApplicationStore.getState().reset();
+    useMediaStore.getState().reset();
+    useSettingsStore.getState().reset();
+    vi.mocked(bridge.getAppConfig).mockResolvedValue(DEFAULT_APP_CONFIG);
+    vi.mocked(bridge.getMediaItems).mockResolvedValue({
+      items: [],
+      ignored_orphan_count: 0,
+      errors: [],
+      root: 'C:/Kiosk/Media',
+    });
   });
 
   it('calls bridge.exitApp once on Ctrl+Alt+Q and prevents default', () => {
@@ -98,6 +112,9 @@ describe('App kiosk key guard & shortcuts', () => {
     const removeSpy = vi.spyOn(window, 'removeEventListener');
 
     const { unmount } = render(<App />);
+    await act(async () => {
+      await Promise.resolve();
+    });
     unmount();
 
     // Verify keydown, wheel, contextmenu were removed
