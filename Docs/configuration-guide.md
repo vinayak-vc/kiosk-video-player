@@ -8,7 +8,7 @@ The application configures its operational parameters through an environment fil
 
 | Variable Name | Type | Default Value | Description |
 |---------------|------|---------------|-------------|
-| `KIOSK_MEDIA_ROOT` | string | `/sdcard/Kiosk/Media` (Android)<br>`./Media` (Windows) | Absolute path to the media folder containing video/thumbnail pairs. |
+| `KIOSK_MEDIA_ROOT` | string | `/sdcard/Kiosk/Media` (Android)<br>`C:/Kiosk/Media` (Windows) | Absolute path to the media folder containing video/thumbnail pairs. |
 | `IDLE_TIMEOUT_SECONDS` | integer | `60` | Inactivity time before unattended kiosk transitions to Slideshow. |
 | `CONTROLS_AUTO_HIDE_SECONDS` | integer | `4` | Seconds before player controls fade out while video is playing. |
 | `SLIDESHOW_MODE` | string | `screensaver` | `screensaver` (plays Screensaver.mp4), `shuffle` (random bag), or `sequential` (natural order). |

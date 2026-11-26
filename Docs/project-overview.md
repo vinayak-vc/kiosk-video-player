@@ -55,7 +55,7 @@ The application is structured around three primary presentation states and one h
   - `screensaver`: Dedicated looping `Screensaver.mp4`.
   - `shuffle`: Shuffle-bag cycling through all gallery videos with no consecutive repeats (unless 1 item).
   - `sequential`: Deterministic natural-order playback cycling.
-- **Instant Escape**: A single touch anywhere immediately dismisses the slideshow and restores the Gallery with zero lag.
+- **Instant Escape**: A single touch anywhere immediately dismisses the slideshow and restores the Gallery.
 
 ### 2.4 The Hidden Admin Panel
 - **Access Gestures**: Long-pressing the top-left 120×120px hotspot for 2.0 seconds, or pressing `Ctrl+Alt+S` on an attached keyboard.

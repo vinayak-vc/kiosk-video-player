@@ -122,6 +122,9 @@ adb shell dpm set-device-owner com.viitor.kioskplayer/.DeviceAdminReceiver
 ### 5.4 Auto-Start on Boot
 The application manifest registers `RECEIVE_BOOT_COMPLETED`. Upon system startup, the app automatically initializes and launches into the Gallery screen without operator intervention.
 
+> [!NOTE] Hardware Verification Status
+> Auto-start on boot is implemented via `RECEIVE_BOOT_COMPLETED` and verified on the Android emulator. On the physical 75-inch Android TV hardware, manufacturers often apply aggressive background execution limits or custom OEM launch permissions. Boot-start and hardware 4K video playback remain **UNVERIFIED on the target TV hardware** until confirmed on-site using the built-in Admin Panel Hardware & Playback Diagnostics tool (which generates `/sdcard/Kiosk/diagnostics.txt`).
+
 ---
 
 ## 6. Administrative Access & Maintenance Gestures

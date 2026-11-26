@@ -2,7 +2,7 @@
 
 ## 1. System Architecture
 
-The application adopts a hybrid Tauri v2 architecture designed for maximum performance, minimal attack surface, and deterministic memory usage on Android TV and Windows.
+The application adopts a hybrid Tauri v2 architecture designed for high responsiveness, minimal attack surface, and stable memory usage on Android TV and Windows.
 
 ```mermaid
 flowchart TD
