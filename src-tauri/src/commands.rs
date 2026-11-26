@@ -1,5 +1,8 @@
 use tauri::{command, AppHandle, Emitter, State};
-use crate::config::{AppConfig, ConfigService};
+use tauri_plugin_dialog::DialogExt;
+use crate::config::{
+    validate_media_folder_structured, AppConfig, ConfigService, FolderValidationError,
+};
 use crate::media::MediaItem;
 use crate::logger::Logger;
 
@@ -48,6 +51,53 @@ pub fn set_media_root(
             Err(err)
         }
     }
+}
+
+#[command]
+pub async fn pick_media_folder(
+    app_handle: AppHandle,
+    logger: State<'_, Logger>,
+) -> Result<Option<String>, FolderValidationError> {
+    logger.info("pick_media_folder invoked: opening native folder picker");
+    let dialog_handle = app_handle.clone();
+
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        dialog_handle
+            .dialog()
+            .file()
+            .set_title("Select Kiosk Media Folder")
+            .blocking_pick_folder()
+    })
+    .await
+    .map_err(|e| FolderValidationError {
+        code: "DIALOG_FAILED".to_string(),
+        message: format!("Folder picker task failed: {}", e),
+    })?;
+
+    let Some(file_path) = picked else {
+        logger.info("pick_media_folder cancelled by user");
+        return Ok(None);
+    };
+
+    let path_buf = file_path.into_path().map_err(|e| FolderValidationError {
+        code: "INVALID_PATH".to_string(),
+        message: format!("Selected folder path could not be resolved: {}", e),
+    })?;
+
+    let path_str = path_buf.to_string_lossy().to_string();
+    validate_media_folder_structured(&path_str).map_err(|err| {
+        logger.warn(&format!("pick_media_folder validation failed: {}", err));
+        err
+    })?;
+
+    logger.info(&format!("pick_media_folder selected valid folder: '{}'", path_str));
+    Ok(Some(path_str))
+}
+
+#[command]
+pub fn validate_media_folder_cmd(path: String) -> Result<String, FolderValidationError> {
+    let validated = validate_media_folder_structured(&path)?;
+    Ok(validated.to_string_lossy().to_string())
 }
 
 #[command]

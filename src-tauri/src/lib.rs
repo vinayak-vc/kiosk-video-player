@@ -12,6 +12,7 @@ use logger::Logger;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
             let logger = match Logger::new(&app_handle) {
@@ -44,6 +45,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             commands::set_media_root,
+            commands::pick_media_folder,
+            commands::validate_media_folder_cmd,
             commands::get_media_items,
             commands::log_client_message,
             commands::exit_kiosk_app,

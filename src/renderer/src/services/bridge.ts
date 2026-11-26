@@ -16,6 +16,14 @@ class TauriBridge {
     return invoke<AppConfig>('set_media_root', { path });
   }
 
+  async pickMediaFolder(): Promise<string | null> {
+    return invoke<string | null>('pick_media_folder');
+  }
+
+  async validateMediaFolder(path: string): Promise<string> {
+    return invoke<string>('validate_media_folder_cmd', { path });
+  }
+
   async getMediaItems(): Promise<MediaItem[]> {
     return invoke<MediaItem[]>('get_media_items');
   }

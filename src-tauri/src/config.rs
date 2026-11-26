@@ -42,26 +42,53 @@ pub struct ConfigService {
     app_data_dir: PathBuf,
 }
 
-/// Validates that a folder path exists, is a directory, and is readable.
-pub fn validate_media_folder(raw_path: &str) -> Result<PathBuf, String> {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FolderValidationError {
+    pub code: String,
+    pub message: String,
+}
+
+impl std::fmt::Display for FolderValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}] {}", self.code, self.message)
+    }
+}
+
+/// Validates that a folder path exists, is a directory, and is readable, returning structured errors.
+pub fn validate_media_folder_structured(raw_path: &str) -> Result<PathBuf, FolderValidationError> {
     let trimmed = raw_path.trim();
     if trimmed.is_empty() {
-        return Err("Media folder path cannot be empty".to_string());
+        return Err(FolderValidationError {
+            code: "EMPTY_PATH".to_string(),
+            message: "Media folder path cannot be empty".to_string(),
+        });
     }
 
     let path = PathBuf::from(trimmed);
     if !path.exists() {
-        return Err(format!("Media folder does not exist: {}", trimmed));
+        return Err(FolderValidationError {
+            code: "NOT_FOUND".to_string(),
+            message: format!("Media folder does not exist: {}", trimmed),
+        });
     }
     if !path.is_dir() {
-        return Err(format!("Media path is not a directory: {}", trimmed));
+        return Err(FolderValidationError {
+            code: "NOT_DIRECTORY".to_string(),
+            message: format!("Media path is not a directory: {}", trimmed),
+        });
     }
 
-    // Verify directory is readable
-    fs::read_dir(&path)
-        .map_err(|e| format!("Media folder is not readable ({}): {}", trimmed, e))?;
+    fs::read_dir(&path).map_err(|e| FolderValidationError {
+        code: "NOT_READABLE".to_string(),
+        message: format!("Media folder is not readable ({}): {}", trimmed, e),
+    })?;
 
     Ok(path)
+}
+
+/// Validates that a folder path exists, is a directory, and is readable.
+pub fn validate_media_folder(raw_path: &str) -> Result<PathBuf, String> {
+    validate_media_folder_structured(raw_path).map_err(|e| e.message)
 }
 
 /// Parses a .env file content into key-value pairs without logging secrets.
@@ -385,10 +412,20 @@ RETURN_TO_GALLERY_ON_END=invalid_bool
         let file_path = tmp.join("not_a_dir.txt");
         fs::write(&file_path, "hi").unwrap();
 
-        assert!(validate_media_folder("").is_err());
-        assert!(validate_media_folder("   ").is_err());
-        assert!(validate_media_folder(tmp.join("missing").to_str().unwrap()).is_err());
-        assert!(validate_media_folder(file_path.to_str().unwrap()).is_err());
+        assert_eq!(validate_media_folder_structured("").unwrap_err().code, "EMPTY_PATH");
+        assert_eq!(validate_media_folder_structured("   ").unwrap_err().code, "EMPTY_PATH");
+        assert_eq!(
+            validate_media_folder_structured(tmp.join("missing").to_str().unwrap())
+                .unwrap_err()
+                .code,
+            "NOT_FOUND"
+        );
+        assert_eq!(
+            validate_media_folder_structured(file_path.to_str().unwrap())
+                .unwrap_err()
+                .code,
+            "NOT_DIRECTORY"
+        );
         assert!(validate_media_folder(tmp.to_str().unwrap()).is_ok());
 
         let _ = fs::remove_dir_all(&tmp);
