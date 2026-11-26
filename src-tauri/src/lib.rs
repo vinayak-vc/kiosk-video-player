@@ -48,8 +48,14 @@ pub fn run() {
                     app.manage(media_watcher);
                 }
                 Err(err) => {
-                    eprintln!("[ERROR] Failed to initialize MediaWatcher: {}", err);
-                    return Err(Box::new(std::io::Error::other(err)));
+                    if let Some(l) = app_handle.try_state::<Logger>() {
+                        l.warn(&format!(
+                            "MediaWatcher failed to start (running in degraded manual-rescan mode): {}",
+                            err
+                        ));
+                    } else {
+                        eprintln!("[WARN] MediaWatcher failed to start: {}", err);
+                    }
                 }
             }
 
