@@ -484,4 +484,25 @@ mod tests {
         assert_eq!(res.items[0].video_url, "http://kiosk-media.localhost/My%20Video.mp4");
         assert_eq!(res.items[0].thumbnail_url, "http://kiosk-media.localhost/my%20video.PNG");
     }
+
+    #[test]
+    fn test_video_count_and_image_count_reported_accurately() {
+        let vids_only = match_media_entries(
+            &[entry("a.mp4", false, 10), entry("b.MP4", false, 20)],
+            "C:/Media",
+            vec![],
+        );
+        assert_eq!(vids_only.video_count, 2);
+        assert_eq!(vids_only.image_count, 0);
+        assert!(vids_only.items.is_empty());
+
+        let imgs_only = match_media_entries(
+            &[entry("a.png", false, 10), entry("b.jpeg", false, 20), entry("c.jpg", false, 30)],
+            "C:/Media",
+            vec![],
+        );
+        assert_eq!(imgs_only.video_count, 0);
+        assert_eq!(imgs_only.image_count, 3);
+        assert!(imgs_only.items.is_empty());
+    }
 }
