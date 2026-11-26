@@ -225,7 +225,12 @@ export class SequentialStrategy implements SlideshowStrategy {
   }
 
   markFailed(id: string): void {
+    const prevPool = this.items.filter((i) => !this.failedIds.has(i.id));
+    const failedIdx = prevPool.findIndex((i) => i.id === id);
     this.failedIds.add(id);
+    if (failedIdx !== -1 && failedIdx < this.index && this.index > 0) {
+      this.index--;
+    }
   }
 
   updateMedia(items: MediaItem[]): void {
@@ -268,6 +273,7 @@ export class SlideshowController {
   private shuffleStrategy: ShuffleBagStrategy;
   private sequentialStrategy: SequentialStrategy;
   private activeStrategy: SlideshowStrategy;
+  private reservedTrack: SlideshowTrack | null = null;
   private warnedFallback = false;
   private onWarn?: (message: string) => void;
   private onAllFailed?: (reason: string) => void;
@@ -296,12 +302,46 @@ export class SlideshowController {
     return this.activeStrategy.mode;
   }
 
-  /** Peek at the upcoming track without advancing the cursor. Used to preload the inactive <video> slot. */
+  /**
+   * DECIDES and locks the upcoming track.
+   * If a track is already reserved, returns that track.
+   * Applies bag refill and no-repeat rules once at decision time.
+   */
+  reserveNext(): SlideshowTrack | null {
+    if (this.reservedTrack) {
+      return this.reservedTrack;
+    }
+    const track = this.fetchNextTrackFromStrategy();
+    this.reservedTrack = track;
+    return track;
+  }
+
+  /**
+   * Commits the currently reserved track and clears the reservation slot.
+   * If no track was reserved, decides and commits one immediately.
+   */
+  commitReserved(): SlideshowTrack | null {
+    if (this.reservedTrack) {
+      const track = this.reservedTrack;
+      this.reservedTrack = null;
+      return track;
+    }
+    return this.fetchNextTrackFromStrategy();
+  }
+
+  /**
+   * Peek at the upcoming track without advancing the cursor.
+   * Guaranteed to equal the track that commitReserved() will play.
+   */
   peek(): SlideshowTrack | null {
-    return this.activeStrategy.peek();
+    return this.reservedTrack ?? this.reserveNext();
   }
 
   next(): SlideshowTrack | null {
+    return this.commitReserved();
+  }
+
+  private fetchNextTrackFromStrategy(): SlideshowTrack | null {
     let track = this.activeStrategy.next();
 
     if (!track && this.configuredMode === 'screensaver' && this.activeStrategy === this.screensaverStrategy) {
@@ -322,6 +362,9 @@ export class SlideshowController {
   }
 
   markFailed(id: string): void {
+    if (this.reservedTrack?.id === id) {
+      this.reservedTrack = null;
+    }
     this.activeStrategy.markFailed(id);
     if (id === SCREENSAVER_TRACK_ID && this.configuredMode === 'screensaver') {
       if (!this.warnedFallback) {
@@ -358,7 +401,16 @@ export class SlideshowController {
         this.configuredMode = nextMode;
         this.warnedFallback = false;
         this.activeStrategy = this.pickStrategyForMode(nextMode);
+        this.reservedTrack = null;
       }
     }
+  }
+
+  reset(): void {
+    this.reservedTrack = null;
+    this.screensaverStrategy.reset();
+    this.shuffleStrategy.reset();
+    this.sequentialStrategy.reset();
+    this.activeStrategy = this.pickStrategyForMode(this.configuredMode);
   }
 }

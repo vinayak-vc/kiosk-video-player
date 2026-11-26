@@ -17,7 +17,7 @@ const CSV_PATH = path.resolve(__dirname, '../Docs/evidence/emulator_soak_30min.c
 
 function runAdb(cmd) {
   try {
-    return execSync(`"${ADB}" ${cmd}`, { encoding: 'utf8', timeout: 20000 });
+    return execSync(`"${ADB}" ${cmd}`, { encoding: 'utf8', timeout: 8000 });
   } catch (err) {
     return '';
   }
@@ -29,8 +29,6 @@ function getPid() {
 }
 
 function parseMemory(pid) {
-  // Try dumpsys meminfo first
-  const dumpsys = runAdb(`shell dumpsys meminfo ${PKG}`);
   let pssTotal = 0;
   let rssTotal = 0;
   let nativeHeap = 0;
@@ -38,6 +36,7 @@ function parseMemory(pid) {
   let privateDirty = 0;
   let webviews = 0;
 
+  const dumpsys = runAdb(`shell dumpsys meminfo ${PKG}`);
   if (dumpsys && dumpsys.includes('TOTAL PSS:')) {
     const pssMatch = dumpsys.match(/TOTAL PSS:\s+(\d+)/);
     if (pssMatch) pssTotal = parseInt(pssMatch[1], 10);
@@ -52,7 +51,6 @@ function parseMemory(pid) {
     const wvMatch = dumpsys.match(/WebViews:\s+(\d+)/);
     if (wvMatch) webviews = parseInt(wvMatch[1], 10);
   } else if (pid) {
-    // Fallback to smaps_rollup
     const smaps = runAdb(`shell cat /proc/${pid}/smaps_rollup`);
     const pssM = smaps.match(/Pss:\s+(\d+)\s+kB/);
     if (pssM) pssTotal = parseInt(pssM[1], 10);
@@ -72,10 +70,13 @@ async function main() {
   const headers = 'minute,timestamp,pid,pss_total_kb,rss_total_kb,native_heap_kb,java_heap_kb,private_dirty_kb,webviews\n';
   fs.writeFileSync(CSV_PATH, headers);
 
+  runAdb('root');
+  await new Promise(r => setTimeout(r, 2000));
+
   let pid = getPid();
   if (!pid) {
     console.log('App not running, launching...');
-    runAdb(`shell monkey -p ${PKG} -c android.intent.category.LAUNCHER 1`);
+    runAdb(`shell am start -n ${PKG}/.MainActivity`);
     await new Promise(r => setTimeout(r, 4000));
     pid = getPid();
   }
@@ -84,33 +85,34 @@ async function main() {
   const TOTAL_MINUTES = 30;
 
   for (let m = 1; m <= TOTAL_MINUTES; m++) {
+    const cycleStart = Date.now();
     const timestamp = new Date().toISOString();
     pid = getPid() || pid;
 
     // Simulate kiosk cycle activity:
     // 1. Tap gallery card (e.g. card 1 at ~400, 400) to open player
     runAdb('shell input tap 400 400');
-    await new Promise(r => setTimeout(r, 6000)); // Play 6s
+    await new Promise(r => setTimeout(r, 5000)); // Play 5s
 
     // 2. Tap top-left to return to gallery (Back button ~60, 60)
     runAdb('shell input tap 60 60');
-    await new Promise(r => setTimeout(r, 4000)); // Gallery settle
+    await new Promise(r => setTimeout(r, 3000)); // Gallery settle
 
-    // 3. Wait in gallery to allow idle transition or trigger next screen
-    await new Promise(r => setTimeout(r, 10000));
-
-    // 4. Tap screen center in case slideshow started to return to gallery
+    // 3. Tap screen center in case slideshow started
     runAdb('shell input tap 960 60');
+    await new Promise(r => setTimeout(r, 2000));
 
     // Collect memory metrics
     const mem = parseMemory(pid);
     const row = `${m},${timestamp},${pid},${mem.pssTotal},${mem.rssTotal},${mem.nativeHeap},${mem.javaHeap},${mem.privateDirty},${mem.webviews}\n`;
     fs.appendFileSync(CSV_PATH, row);
 
-    console.log(`[Soak Min ${String(m).padStart(2)}/${TOTAL_MINUTES}] PSS: ${(mem.pssTotal / 1024).toFixed(1)} MB | RSS: ${(mem.rssTotal / 1024).toFixed(1)} MB | Native: ${(mem.nativeHeap / 1024).toFixed(1)} MB | WebViews: ${mem.webviews}`);
+    console.log(`[Soak Min ${String(m).padStart(2)}/${TOTAL_MINUTES}] PSS: ${(mem.pssTotal / 1024).toFixed(1)} MB | RSS: ${(mem.rssTotal / 1024).toFixed(1)} MB | Native: ${(mem.nativeHeap / 1024).toFixed(1)} MB | Java: ${(mem.javaHeap / 1024).toFixed(1)} MB | WebViews: ${mem.webviews}`);
 
-    // Wait remainder of minute (~40s)
-    await new Promise(r => setTimeout(r, 40000));
+    // Wait remainder of 60 seconds
+    const elapsed = Date.now() - cycleStart;
+    const remaining = Math.max(1000, 60000 - elapsed);
+    await new Promise(r => setTimeout(r, remaining));
   }
 
   console.log('30-minute soak test completed successfully. CSV written to:', CSV_PATH);

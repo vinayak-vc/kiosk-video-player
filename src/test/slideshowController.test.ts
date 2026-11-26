@@ -127,4 +127,77 @@ describe('Slideshow strategies (P5-2)', () => {
     expect(strategy.next()?.id).toBe('v3');
     expect(strategy.next()?.id).toBe('v1');
   });
+
+  describe('BT-42 Preload Contract in SlideshowController', () => {
+    it('reserveNext() locks upcoming track, guaranteeing peek() === commitReserved()', () => {
+      const items = makeItems(4);
+      const controller = new SlideshowController({
+        mode: 'sequential',
+        items,
+        screensaver: null,
+      });
+
+      const active = controller.commitReserved();
+      expect(active?.id).toBe('v1');
+
+      // Reserve next track
+      const reserved1 = controller.reserveNext();
+      expect(reserved1?.id).toBe('v2');
+
+      // Multiple peeks return the identical locked track
+      expect(controller.peek()?.id).toBe('v2');
+      expect(controller.peek()?.id).toBe('v2');
+      expect(controller.reserveNext()?.id).toBe('v2');
+
+      // commitReserved returns that exact locked track and frees reservation
+      const committed = controller.commitReserved();
+      expect(committed?.id).toBe('v2');
+
+      // Next reservation advances to v3
+      const reserved2 = controller.reserveNext();
+      expect(reserved2?.id).toBe('v3');
+    });
+
+    it('applies bag refill and no-repeat rules once at decision time', () => {
+      const items = makeItems(3);
+      const controller = new SlideshowController({
+        mode: 'shuffle',
+        items,
+        screensaver: null,
+      });
+
+      const seen = new Set<string>();
+      let prevId: string | null = null;
+      for (let i = 0; i < 9; i++) {
+        const reserved = controller.reserveNext()!;
+        expect(controller.peek()).toEqual(reserved);
+        expect(reserved.id).not.toBe(prevId);
+        const committed = controller.commitReserved()!;
+        expect(committed).toEqual(reserved);
+        prevId = committed.id;
+        seen.add(committed.id);
+      }
+      expect(seen.size).toBe(3);
+    });
+
+    it('markFailed on a reserved track clears the reservation and reserves replacement', () => {
+      const items = makeItems(3);
+      const controller = new SlideshowController({
+        mode: 'sequential',
+        items,
+        screensaver: null,
+      });
+
+      controller.commitReserved(); // v1 active
+      const reserved = controller.reserveNext()!; // v2 reserved
+      expect(reserved.id).toBe('v2');
+
+      // Fail v2 while reserved
+      controller.markFailed('v2');
+
+      // Next reserve/commit yields v3
+      expect(controller.reserveNext()?.id).toBe('v3');
+      expect(controller.commitReserved()?.id).toBe('v3');
+    });
+  });
 });

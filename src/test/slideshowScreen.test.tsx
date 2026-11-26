@@ -108,8 +108,11 @@ describe('SlideshowScreen (P5-3)', () => {
     expect(videoA.muted).toBe(false);
     expect(videoB.muted).toBe(true);
 
-    // Advance when A ends -> switches to B and releases A after crossfade
+    // Advance when A ends -> switches to B after canplay and releases A after crossfade
     fireEvent.ended(videoA);
+    act(() => {
+      fireEvent.canPlay(videoB);
+    });
     expect(videoA.muted).toBe(true);
     expect(videoB.muted).toBe(false);
 
@@ -244,5 +247,111 @@ describe('SlideshowScreen (P5-3)', () => {
 
     // Slideshow transitions to shuffle track without crashing
     expect(useApplicationStore.getState().state).toBe('SLIDESHOW');
+  });
+
+  describe('BT-42 Slideshow Preload Contract Verification', () => {
+    it('holds reserved track in INACTIVE slot React state immediately on mount (first transition preloaded before active ends)', () => {
+      useSettingsStore.setState((s) => ({
+        config: { ...s.config, slideshow_mode: 'sequential' },
+      }));
+      useMediaStore.getState().setScanResult({
+        items: sampleItems,
+        screensaver: null,
+        ignored_orphan_count: 0,
+        video_count: 2,
+        image_count: 2,
+        errors: [],
+        root: 'C:/Media',
+      });
+
+      render(<SlideshowScreen />);
+      const videoA = screen.getByTestId('slideshow-video-a') as HTMLVideoElement;
+      const videoB = screen.getByTestId('slideshow-video-b') as HTMLVideoElement;
+
+      // Slot A is active playing v1
+      expect(videoA.src).toContain('v1.mp4');
+      expect(videoA.muted).toBe(false);
+
+      // Inactive Slot B has src=v2.mp4 before video A ends (preload='auto', muted, not active)
+      expect(videoB.src).toContain('v2.mp4');
+      expect(videoB.muted).toBe(true);
+      expect(videoB.getAttribute('preload')).toBe('auto');
+    });
+
+    it('crossfades only after canplay event fires on the preloaded slot', () => {
+      useSettingsStore.setState((s) => ({
+        config: { ...s.config, slideshow_mode: 'sequential' },
+      }));
+      useMediaStore.getState().setScanResult({
+        items: sampleItems,
+        screensaver: null,
+        ignored_orphan_count: 0,
+        video_count: 2,
+        image_count: 2,
+        errors: [],
+        root: 'C:/Media',
+      });
+
+      render(<SlideshowScreen />);
+      const videoA = screen.getByTestId('slideshow-video-a') as HTMLVideoElement;
+      const videoB = screen.getByTestId('slideshow-video-b') as HTMLVideoElement;
+
+      // Active video A ends
+      act(() => {
+        fireEvent.ended(videoA);
+      });
+
+      // Before canplay fires, video B is not yet active/unmuted
+      expect(videoB.muted).toBe(true);
+      expect(videoA.muted).toBe(false);
+
+      // canplay fires on video B -> triggers crossfade
+      act(() => {
+        fireEvent.canPlay(videoB);
+      });
+      expect(videoB.muted).toBe(false);
+      expect(videoA.muted).toBe(true);
+
+      // After 600ms crossfade, old video A is released exactly once
+      act(() => {
+        vi.advanceTimersByTime(650);
+      });
+      expect(HTMLMediaElement.prototype.pause).toHaveBeenCalledTimes(1);
+    });
+
+    it('exit mid-preload cleanly releases both active and preloaded video elements', () => {
+      useSettingsStore.setState((s) => ({
+        config: { ...s.config, slideshow_mode: 'sequential' },
+      }));
+      useMediaStore.getState().setScanResult({
+        items: sampleItems,
+        screensaver: null,
+        ignored_orphan_count: 0,
+        video_count: 2,
+        image_count: 2,
+        errors: [],
+        root: 'C:/Media',
+      });
+
+      render(<SlideshowScreen />);
+      const container = screen.getByTestId('slideshow-screen');
+      const videoA = screen.getByTestId('slideshow-video-a') as HTMLVideoElement;
+      const videoB = screen.getByTestId('slideshow-video-b') as HTMLVideoElement;
+
+      // Both slots have active/preloaded src
+      expect(videoA.src).toContain('v1.mp4');
+      expect(videoB.src).toContain('v2.mp4');
+
+      // User taps screen mid-preload
+      fireEvent.pointerDown(container, { isPrimary: true });
+
+      // State transitions to GALLERY
+      expect(useApplicationStore.getState().state).toBe('GALLERY');
+
+      // Both video elements are paused and stripped of src
+      expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+      expect(videoA.getAttribute('src')).toBeNull();
+      expect(videoB.getAttribute('src')).toBeNull();
+    });
   });
 });

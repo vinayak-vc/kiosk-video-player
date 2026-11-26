@@ -477,9 +477,10 @@ describe('Brief §17 Compliance: App Logic & Playback Suites (BT-27)', () => {
       const videoA = screen.getByTestId('slideshow-video-a') as HTMLVideoElement;
       const videoB = screen.getByTestId('slideshow-video-b') as HTMLVideoElement;
 
-      // Track A ends -> triggers crossfade to B
+      // Track A ends -> triggers crossfade to B after canplay
       act(() => {
         fireEvent.ended(videoA);
+        fireEvent.canPlay(videoB);
       });
       expect(videoB.muted).toBe(false);
       expect(videoA.muted).toBe(true);
@@ -489,7 +490,9 @@ describe('Brief §17 Compliance: App Logic & Playback Suites (BT-27)', () => {
         vi.advanceTimersByTime(650);
       });
       expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
-      expect(videoA.getAttribute('src')).toBeNull();
+      // Old slot is released and immediately preloads the upcoming track via React state (BT-42)
+      expect(videoA.src).toContain('Clip%203.mp4');
+      expect(videoA.muted).toBe(true);
     });
 
     it('single tap anywhere in slideshow immediately exits to GALLERY and cleans up videos', () => {

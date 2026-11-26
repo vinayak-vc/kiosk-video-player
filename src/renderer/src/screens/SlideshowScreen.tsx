@@ -41,6 +41,7 @@ export const SlideshowScreen: React.FC = () => {
   const videoBRef = useRef<HTMLVideoElement | null>(null);
   const controllerRef = useRef<SlideshowController | null>(null);
   const crossfadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canPlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stallTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTimeRef = useRef<number>(-1);
   const lastProgressAtRef = useRef<number>(Date.now());
@@ -55,6 +56,10 @@ export const SlideshowScreen: React.FC = () => {
     if (crossfadeTimerRef.current !== null) {
       clearTimeout(crossfadeTimerRef.current);
       crossfadeTimerRef.current = null;
+    }
+    if (canPlayTimeoutRef.current !== null) {
+      clearTimeout(canPlayTimeoutRef.current);
+      canPlayTimeoutRef.current = null;
     }
     if (stallTimerRef.current !== null) {
       clearInterval(stallTimerRef.current);
@@ -85,7 +90,7 @@ export const SlideshowScreen: React.FC = () => {
       const controller = controllerRef.current;
       if (!controller) return;
 
-      const nextTrack = controller.next();
+      const nextTrack = controller.commitReserved();
       const nextMode = controller.getEffectiveMode();
       setEffectiveMode(nextMode);
       if (!nextTrack) return;
@@ -99,44 +104,78 @@ export const SlideshowScreen: React.FC = () => {
 
       const nextSlot = fromSlot === 'a' ? 'b' : 'a';
       const oldVideo = fromSlot === 'a' ? videoARef.current : videoBRef.current;
+      const nextVideo = nextSlot === 'a' ? videoARef.current : videoBRef.current;
 
+      // Ensure the target slot is assigned the committed track in React state
       if (nextSlot === 'a') {
         setSlotATrack(nextTrack);
       } else {
         setSlotBTrack(nextTrack);
       }
-      setActiveSlot(nextSlot);
 
-      if (crossfadeTimerRef.current !== null) {
-        clearTimeout(crossfadeTimerRef.current);
-      }
-      crossfadeTimerRef.current = setTimeout(() => {
-        crossfadeTimerRef.current = null;
-        releaseVideoElement(oldVideo);
-        if (fromSlot === 'a') {
-          setSlotATrack(null);
-        } else {
-          setSlotBTrack(null);
+      const performCrossfade = () => {
+        if (exitingRef.current) return;
+        if (nextVideo) {
+          nextVideo.muted = false;
+          void Promise.resolve(nextVideo.play()).catch(() => {
+            if (exitingRef.current) return;
+            nextVideo.muted = true;
+            void Promise.resolve(nextVideo.play()).catch(() => {});
+          });
         }
+        setActiveSlot(nextSlot);
 
-        // Preload the track AFTER the following one so the inactive slot is
-        // ready before it becomes active. We peek via controller.peek() if
-        // available, otherwise we let the next advanceToNextTrack() handle it.
-        // This keeps the inactive <video> warm so crossfade starts from a
-        // decoded frame rather than a frozen/unloaded video.
-        if (!exitingRef.current && controllerRef.current) {
-          const upcoming = controllerRef.current.peek?.();
-          if (upcoming && !upcoming.isScreensaver) {
-            const inactiveVideo =
-              nextSlot === 'a' ? videoBRef.current : videoARef.current;
-            if (inactiveVideo && !inactiveVideo.src.includes(upcoming.url)) {
-              inactiveVideo.src = upcoming.url;
-              inactiveVideo.muted = true;
-              inactiveVideo.load();
+        if (crossfadeTimerRef.current !== null) {
+          clearTimeout(crossfadeTimerRef.current);
+        }
+        crossfadeTimerRef.current = setTimeout(() => {
+          crossfadeTimerRef.current = null;
+          releaseVideoElement(oldVideo);
+          if (fromSlot === 'a') {
+            setSlotATrack(null);
+          } else {
+            setSlotBTrack(null);
+          }
+
+          // Preload upcoming track into the newly-freed inactive slot via React state
+          if (!exitingRef.current && controllerRef.current) {
+            const upcoming = controllerRef.current.reserveNext();
+            if (upcoming && !upcoming.isScreensaver) {
+              if (fromSlot === 'a') {
+                setSlotATrack(upcoming);
+              } else {
+                setSlotBTrack(upcoming);
+              }
             }
           }
-        }
-      }, CROSSFADE_DURATION_MS);
+        }, CROSSFADE_DURATION_MS);
+      };
+
+      // Wait for canplay if not yet buffered to guarantee zero blank frame
+      if (!nextVideo || nextVideo.readyState >= 3) {
+        performCrossfade();
+      } else {
+        let fired = false;
+        const onCanPlay = () => {
+          if (fired) return;
+          fired = true;
+          if (canPlayTimeoutRef.current !== null) {
+            clearTimeout(canPlayTimeoutRef.current);
+            canPlayTimeoutRef.current = null;
+          }
+          nextVideo.removeEventListener('canplay', onCanPlay);
+          performCrossfade();
+        };
+
+        nextVideo.addEventListener('canplay', onCanPlay, { once: true });
+        canPlayTimeoutRef.current = setTimeout(() => {
+          if (!fired) {
+            fired = true;
+            nextVideo.removeEventListener('canplay', onCanPlay);
+            performCrossfade();
+          }
+        }, 1500);
+      }
     },
     []
   );
@@ -182,7 +221,7 @@ export const SlideshowScreen: React.FC = () => {
     [activeSlot, slotATrack, slotBTrack, advanceToNextTrack, handleVideoError]
   );
 
-  // Initialize controller on mount
+  // Initialize controller on mount and preload the first inactive slot
   useEffect(() => {
     exitingRef.current = false;
     AudioService.play('slideshowTransition');
@@ -204,7 +243,14 @@ export const SlideshowScreen: React.FC = () => {
     if (first) {
       setActiveSlot('a');
       setSlotATrack(first);
-      setSlotBTrack(null);
+
+      // Preload the first transition into slot B as soon as active starts
+      if (!first.isScreensaver) {
+        const reserved = controller.reserveNext();
+        setSlotBTrack(reserved);
+      } else {
+        setSlotBTrack(null);
+      }
     }
 
     return () => {
@@ -352,7 +398,8 @@ export const SlideshowScreen: React.FC = () => {
         data-testid="slideshow-video-a"
         className={`${styles.videoLayer} ${activeSlot === 'a' ? styles.active : styles.inactive}`}
         src={slotATrack?.url}
-        autoPlay
+        autoPlay={activeSlot === 'a'}
+        preload="auto"
         playsInline
         loop={Boolean(slotATrack?.loop)}
         muted={activeSlot !== 'a' || Boolean(slotATrack?.muted)}
@@ -366,7 +413,8 @@ export const SlideshowScreen: React.FC = () => {
           data-testid="slideshow-video-b"
           className={`${styles.videoLayer} ${activeSlot === 'b' ? styles.active : styles.inactive}`}
           src={slotBTrack?.url}
-          autoPlay
+          autoPlay={activeSlot === 'b'}
+          preload="auto"
           playsInline
           muted={activeSlot !== 'b' || Boolean(slotBTrack?.muted)}
           onEnded={() => handleVideoEnded('b')}
