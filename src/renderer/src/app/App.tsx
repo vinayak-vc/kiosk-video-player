@@ -4,11 +4,13 @@ import { bridge } from '../services/bridge';
 import { executeStartup, handleMediaChangedEvent, performMediaScan } from '../services/startup';
 import { useApplicationStore } from '../stores/applicationStore';
 import { useMediaStore } from '../stores/mediaStore';
+import { usePlayerStore } from '../stores/playerStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { GalleryScreen } from '../screens/GalleryScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
 import { EmptyScreen } from '../screens/EmptyScreen';
+import { VideoPlayer } from '../components/VideoPlayer';
 import '../styles/global.css';
 import styles from './App.module.css';
 
@@ -17,6 +19,7 @@ export const App: React.FC = () => {
   const errorReason = useApplicationStore((s) => s.errorReason);
   const dispatch = useApplicationStore((s) => s.dispatch);
   const items = useMediaStore((s) => s.items);
+  const selectedMediaId = usePlayerStore((s) => s.selectedMediaId);
   const mediaRoot = useMediaStore((s) => s.root);
   const videoCount = useMediaStore((s) => s.videoCount);
   const imageCount = useMediaStore((s) => s.imageCount);
@@ -150,6 +153,23 @@ export const App: React.FC = () => {
             </button>
           </div>
         );
+      case 'INDIVIDUAL_PLAYER': {
+        const selectedItem = items.find((item) => item.id === selectedMediaId);
+        if (!selectedItem) {
+          return (
+            <ErrorScreen
+              errorReason="Selected video is no longer available"
+              mediaRoot={mediaRoot || configRoot}
+              onSelectFolder={handleSelectFolder}
+              onRetry={() => {
+                usePlayerStore.getState().clearSelection();
+                useApplicationStore.getState().dispatch('PLAYER_EXIT');
+              }}
+            />
+          );
+        }
+        return <VideoPlayer item={selectedItem} />;
+      }
       case 'GALLERY':
       default:
         if (items.length === 0) {
