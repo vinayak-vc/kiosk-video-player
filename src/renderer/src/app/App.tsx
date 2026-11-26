@@ -188,12 +188,26 @@ export const App: React.FC = () => {
       IdleTimerService.reset();
     };
 
+    const handleFocus = () => {
+      // Regaining window focus resumes/resets idle monitoring correctly
+      IdleTimerService.resume();
+    };
+
+    const handleBlur = () => {
+      // Losing window focus suspends idle timer to prevent background navigation
+      IdleTimerService.pause();
+    };
+
     window.addEventListener('pointerdown', resetOnActivity, true);
     window.addEventListener('keydown', resetOnActivity, true);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       window.removeEventListener('pointerdown', resetOnActivity, true);
       window.removeEventListener('keydown', resetOnActivity, true);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
       IdleTimerService.stop();
     };
   }, [appState, isPlayerPlaying, idleTimeoutSeconds, items.length, screensaver]);

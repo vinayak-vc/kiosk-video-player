@@ -158,4 +158,41 @@ describe('IdleTimerService (P5-1)', () => {
     unmount();
     expect(IdleTimerService.isActive()).toBe(false);
   });
+
+  it('suspends idle timer on window blur and resumes/resets on window focus', async () => {
+    const { unmount } = render(<App />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+    expect(IdleTimerService.isActive()).toBe(true);
+
+    // Window loses focus (e.g. alt-tab or system popup)
+    act(() => {
+      window.dispatchEvent(new Event('blur'));
+    });
+    expect(IdleTimerService.isActive()).toBe(false);
+
+    // While blurred, advancing past timeout does not enter SLIDESHOW
+    act(() => {
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+
+    // Regaining focus resumes/resets idle timer
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(IdleTimerService.isActive()).toBe(true);
+
+    // After 10s of active focus without input -> transitions to SLIDESHOW
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(useApplicationStore.getState().state).toBe('SLIDESHOW');
+
+    unmount();
+  });
 });
