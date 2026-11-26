@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Film, FolderOpen, FolderX, Image as ImageIcon, RefreshCw } from 'lucide-react';
-import { createAnimationPresets } from '../services/AnimationService';
+import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { AudioService } from '../services/AudioService';
 import styles from './StateScreens.module.css';
 
@@ -76,8 +76,7 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
   onRetry,
 }) => {
   const [busy, setBusy] = useState(false);
-  const reducedMotion = Boolean(useReducedMotion());
-  const presets = useMemo(() => createAnimationPresets(reducedMotion), [reducedMotion]);
+  const presets = useAnimationPresets();
 
   const variant = classifyEmptyState({ root, videoCount, imageCount });
   const copy = EMPTY_COPY[variant];

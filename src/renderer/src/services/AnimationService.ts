@@ -1,25 +1,41 @@
+import type { CSSProperties } from 'react';
 import type { Transition, Variants, TargetAndTransition } from 'framer-motion';
 
+/**
+ * AnimationService.ts
+ * Single reusable preset module for all animations in brief §9.
+ *
+ * STRICT PERFORMANCE RULE:
+ * No preset in this module may animate `width`, `height`, `top`, `left`, or `box-shadow`.
+ * Only GPU-composited `opacity` and `transform` (`scale`, `x`, `y`) are animated.
+ */
+
 export const ANIMATION_DURATIONS = {
-  galleryEntrance: 0.4,
-  galleryExit: 0.28,
-  cardStaggerSeconds: 0.06, // 60ms within 50-80ms brief target
+  galleryEntrance: 0.5, // brief §9: 450-650ms
+  galleryExit: 0.45, // brief §9: 450-650ms
+  cardStaggerSeconds: 0.06, // brief §9: 50-80ms
   cardEntrance: 0.35,
   cardHover: 0.2,
   cardPress: 0.12,
   cardSelect: 0.35,
-  playerEntrance: 0.38,
-  playerExit: 0.28,
-  controlReveal: 0.24,
-  controlHide: 0.22,
-  slideshowEntrance: 0.45,
-  slideshowExit: 0.35,
-  pageTransition: 0.3,
+  playerEntrance: 0.45, // brief §9: 400-600ms
+  playerExit: 0.4, // brief §9: 400-600ms
+  controlReveal: 0.25, // brief §9: 200-300ms
+  controlHide: 0.22, // brief §9: 200-300ms
+  slideshowEntrance: 0.5, // brief §9: 500-800ms
+  slideshowExit: 0.4,
+  pageTransition: 0.3, // brief §9: 300ms
   emptyStateEntrance: 0.35,
   adminPanelEntrance: 0.28,
 } as const;
 
 export const KIOSK_EASE = [0.22, 1, 0.36, 1] as const;
+
+/** Static ambient glow style token (never animated). */
+export const cardAmbientGlow: CSSProperties = {
+  boxShadow:
+    '0 12px 32px rgba(0, 0, 0, 0.55), 0 0 22px rgba(0, 128, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+};
 
 export interface KioskAnimationPresets {
   galleryEntrance: Variants;
@@ -28,6 +44,7 @@ export interface KioskAnimationPresets {
   cardHover: TargetAndTransition;
   cardPress: TargetAndTransition;
   cardSelect: Variants;
+  focusPulse: Variants;
   playerEntrance: Variants;
   playerExit: Variants;
   controlReveal: Variants;
@@ -37,6 +54,7 @@ export interface KioskAnimationPresets {
   pageTransition: Variants;
   emptyStateEntrance: Variants;
   adminPanelEntrance: Variants;
+  cardAmbientGlow: CSSProperties;
   transitions: {
     standard: Transition;
     fast: Transition;
@@ -46,7 +64,6 @@ export interface KioskAnimationPresets {
 
 /**
  * Builds the complete set of Framer Motion presets for the kiosk UI.
- * Uses only GPU-composited `opacity`, `transform` (`scale`, `x`, `y`), and small controlled `filter: blur()`.
  * When `reducedMotion` is true, spatial transforms and durations collapse to instant/opacity-only transitions.
  */
 export function createAnimationPresets(reducedMotion: boolean): KioskAnimationPresets {
@@ -126,6 +143,16 @@ export function createAnimationPresets(reducedMotion: boolean): KioskAnimationPr
         scale: reducedMotion ? 1 : 1.06,
         transition: { duration: dur(ANIMATION_DURATIONS.cardSelect), ease: KIOSK_EASE },
       },
+    },
+
+    focusPulse: {
+      idle: { opacity: 1 },
+      focused: reducedMotion
+        ? { opacity: 1 }
+        : {
+            opacity: [0.7, 1, 0.7],
+            transition: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+          },
     },
 
     playerEntrance: {
@@ -224,6 +251,8 @@ export function createAnimationPresets(reducedMotion: boolean): KioskAnimationPr
       },
     },
 
+    cardAmbientGlow,
+
     transitions: {
       standard: standardTransition,
       fast: fastTransition,
@@ -232,4 +261,5 @@ export function createAnimationPresets(reducedMotion: boolean): KioskAnimationPr
   };
 }
 
+/** Static non-reduced preset instance for non-React contexts; React components should use `useAnimationPresets()`. */
 export const AnimationService = createAnimationPresets(false);

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { createAnimationPresets } from '../services/AnimationService';
+import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { AudioService } from '../services/AudioService';
 import { useApplicationStore } from '../stores/applicationStore';
 import { computeTotalPages, useMediaStore } from '../stores/mediaStore';
@@ -33,8 +33,7 @@ export const GalleryScreen: React.FC = () => {
   const isTransitionLocked = useApplicationStore((s) => s.isTransitionLocked);
   const selectMedia = usePlayerStore((s) => s.selectMedia);
 
-  const reducedMotion = Boolean(useReducedMotion());
-  const presets = useMemo(() => createAnimationPresets(reducedMotion), [reducedMotion]);
+  const presets = useAnimationPresets();
 
   const [direction, setDirection] = useState(1);
 

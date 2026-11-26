@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Film, Play } from 'lucide-react';
 import type { MediaItem } from '../types';
 import type { KioskAnimationPresets } from '../services/AnimationService';
+import { useHoverCapable } from '../hooks/useAnimationPresets';
 import styles from './MediaCard.module.css';
 
 export interface MediaCardProps {
@@ -15,16 +16,18 @@ export interface MediaCardProps {
 export const MediaCard: React.FC<MediaCardProps> = React.memo(
   ({ item, index, presets, onSelect }) => {
     const [imgError, setImgError] = useState(false);
+    const hoverCapable = useHoverCapable();
 
     return (
       <motion.button
         type="button"
         className={styles.card}
+        style={presets.cardAmbientGlow}
         aria-label={`Play ${item.display_title}`}
         variants={presets.cardEntrance(index)}
         initial="hidden"
         animate="visible"
-        whileHover={presets.cardHover}
+        whileHover={hoverCapable ? presets.cardHover : undefined}
         whileTap={presets.cardPress}
         onClick={() => onSelect(item.id)}
       >
