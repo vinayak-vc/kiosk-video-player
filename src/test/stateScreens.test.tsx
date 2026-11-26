@@ -3,6 +3,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { classifyEmptyState, EmptyScreen } from '../renderer/src/screens/EmptyScreen';
 import { ErrorScreen } from '../renderer/src/screens/ErrorScreen';
 import { LoadingScreen } from '../renderer/src/screens/LoadingScreen';
+import { STRINGS } from '../renderer/src/strings';
 
 describe('Empty state classification and EmptyScreen', () => {
   it('classifies all 5 empty state variants accurately', () => {
@@ -14,11 +15,11 @@ describe('Empty state classification and EmptyScreen', () => {
   });
 
   it.each([
-    { root: '', videoCount: 0, imageCount: 0, expected: 'NO_FOLDER', text: 'No Media Folder Configured' },
-    { root: 'C:/Media', videoCount: 0, imageCount: 0, expected: 'EMPTY_FOLDER', text: 'Media Folder Is Empty' },
-    { root: 'C:/Media', videoCount: 2, imageCount: 0, expected: 'ONLY_VIDEOS', text: 'Thumbnails Missing' },
-    { root: 'C:/Media', videoCount: 0, imageCount: 3, expected: 'ONLY_IMAGES', text: 'Videos Missing' },
-    { root: 'C:/Media', videoCount: 2, imageCount: 2, expected: 'NO_VALID_PAIRS', text: 'No Matching Video Pairs' },
+    { root: '', videoCount: 0, imageCount: 0, expected: 'NO_FOLDER' as const, text: STRINGS.empty.NO_FOLDER.title },
+    { root: 'C:/Media', videoCount: 0, imageCount: 0, expected: 'EMPTY_FOLDER' as const, text: STRINGS.empty.EMPTY_FOLDER.title },
+    { root: 'C:/Media', videoCount: 2, imageCount: 0, expected: 'ONLY_VIDEOS' as const, text: STRINGS.empty.ONLY_VIDEOS.title },
+    { root: 'C:/Media', videoCount: 0, imageCount: 3, expected: 'ONLY_IMAGES' as const, text: STRINGS.empty.ONLY_IMAGES.title },
+    { root: 'C:/Media', videoCount: 2, imageCount: 2, expected: 'NO_VALID_PAIRS' as const, text: STRINGS.empty.NO_VALID_PAIRS.title },
   ])('renders EmptyScreen for $expected', ({ root, videoCount, imageCount, expected, text }) => {
     const onSelect = vi.fn();
     const onRetry = vi.fn();
@@ -49,17 +50,17 @@ describe('ErrorScreen and LoadingScreen', () => {
       />
     );
 
-    expect(screen.getByText('Unable to Load Media')).toBeInTheDocument();
+    expect(screen.getByText(STRINGS.error.title)).toBeInTheDocument();
     expect(screen.getByText('Media folder does not exist')).toBeInTheDocument();
     expect(screen.getByText('C:/Missing/Media')).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Select another folder/i }));
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(STRINGS.error.selectFolderButton, 'i') }));
     });
     expect(onSelect).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(STRINGS.error.retryButton, 'i') }));
     });
     expect(onRetry).toHaveBeenCalledTimes(1);
   });

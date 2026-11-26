@@ -1,7 +1,6 @@
 /**
  * Centralised user-visible UI strings for Kiosk Video Player.
- * All on-screen copy is defined here to allow fast proofreading and single-file copy edits.
- * @see Docs/UI_TEXT_PROOFREAD.md
+ * Source of truth: Docs/ui_strings_comparison_75_expo_edition.md (Bold & Modern 75" Expo).
  */
 
 export const STRINGS = {
@@ -11,7 +10,7 @@ export const STRINGS = {
 
   gallery: {
     heading: {
-      prefix: 'Curated to',
+      prefix: 'Built to',
       highlight: 'Inspire',
     },
     prevPageLabel: 'Previous page',
@@ -19,56 +18,57 @@ export const STRINGS = {
   },
 
   loading: {
-    message: 'Preparing Media Library...',
+    message: 'Loading Media...',
   },
 
   empty: {
     NO_PERMISSION: {
-      title: 'Storage Permission Required',
+      title: 'Storage Access Needed',
       description:
-        'Grant all-files access so Kiosk Video Player can read videos and thumbnails from external storage.',
+        'Allow all-files access so the player can load local videos and thumbnails.',
     },
     NO_FOLDER: {
-      title: 'No Media Folder Configured',
+      title: 'No Media Folder Set',
       description:
-        'Select a folder containing matching .mp4 videos and .png/.jpg/.jpeg thumbnails.',
+        'Choose a folder with matching .mp4 videos and .png/.jpg/.jpeg thumbnails.',
     },
     EMPTY_FOLDER: {
-      title: 'Media Folder Is Empty',
+      title: 'Media Folder Empty',
       description:
-        'Add matching <name>.mp4 and <name>.png (or .jpg/.jpeg) pairs to the root of this folder.',
+        'Add matching <name>.mp4 and <name>.png/.jpg/.jpeg files to the folder root.',
     },
     ONLY_VIDEOS: {
       title: 'Thumbnails Missing',
       description:
-        'MP4 videos were found, but each video requires a matching .png, .jpg, or .jpeg thumbnail with the same filename.',
+        'Add a matching .png, .jpg, or .jpeg thumbnail for each .mp4 file.',
     },
     ONLY_IMAGES: {
       title: 'Videos Missing',
       description:
-        'Images were found, but each thumbnail requires a matching .mp4 video with the same filename.',
+        'Add a matching .mp4 video for each thumbnail image.',
     },
     NO_VALID_PAIRS: {
-      title: 'No Matching Video Pairs',
+      title: 'No Matching Pairs',
       description:
-        'Videos and images exist in this folder, but none share the same filename.',
+        'Rename matching video and thumbnail files so they share the exact same name.',
     },
-    grantButton: 'Grant file access',
-    selectFolderButton: 'Select another folder',
+    grantButton: 'Grant Access',
+    selectFolderButton: 'Select Folder',
     retryButton: 'Retry',
   },
 
   error: {
-    title: 'Unable to Load Media',
-    defaultReason: 'Failed to access media folder',
-    playerMissing: 'Selected video is no longer available',
-    selectFolderButton: 'Select another folder',
+    title: 'Media Unavailable',
+    defaultReason: 'Unable to access media folder',
+    playerMissing: 'Video no longer available',
+    selectFolderButton: 'Select Folder',
     retryButton: 'Retry',
   },
 
   player: {
     back: 'Back',
-    backToGallery: 'Back to gallery',
+    backToGallery: 'Back to Gallery',
+    backToGalleryLabel: 'Back to gallery',
     resumePlayback: 'Resume playback',
     seekTimeline: 'Seek timeline',
     pause: 'Pause',
@@ -79,52 +79,51 @@ export const STRINGS = {
     enterFullscreen: 'Enter fullscreen',
     exitFullscreen: 'Exit fullscreen',
     unknownDuration: '--:--',
-    loadWatchdogError: 'Video failed to load within 10 seconds',
-    stallError: 'Video playback stalled',
-    unableToPlay: (code: number) => `Unable to play this video (code ${code})`,
+    loadWatchdogError: 'Took over 10s to load',
+    stallError: 'Playback stalled',
+    unableToPlay: (code: number) => `Playback error (code ${code})`,
   },
 
   admin: {
-    title: 'ADMIN & SYSTEM DIAGNOSTICS',
-    subtitle:
-      'Kiosk configuration, library integrity metrics, folder management, and hardware test playback.',
-    returnToGallery: 'Return to Gallery',
+    title: 'SYSTEM & KIOSK CONTROLS',
+    subtitle: 'Media folder setup, library health, and playback diagnostics.',
+    returnToGallery: 'Back to Gallery',
     closeAriaLabel: 'Close Admin Panel',
 
     sections: {
       mediaRoot: 'Media Root Directory',
-      integrity: 'Library Integrity & File Counts',
-      testPlayback: 'Test Video Playback',
-      deviceInfo: 'Device & Configuration Info',
+      integrity: 'Library Health & Counts',
+      testPlayback: 'Playback Test',
+      deviceInfo: 'Device & Kiosk Config',
     },
 
     actions: {
       validate: 'Validate',
       applyAndRescan: 'Apply & Rescan',
-      browse: 'Browse System Folder',
+      browse: 'Browse Folder',
       forceRescan: 'Force Rescan',
-      exitKiosk: 'Exit Kiosk Application',
+      exitKiosk: 'Exit Kiosk',
       play: 'Play',
       stop: 'Stop',
     },
 
     androidFolderHint:
-      'Copy files to /storage/emulated/0/Kiosk/Media or configure KIOSK_MEDIA_ROOT in kiosk.env',
+      'Place media in /storage/emulated/0/Kiosk/Media or set KIOSK_MEDIA_ROOT in kiosk.env',
 
     stats: {
       playablePairs: 'Playable Pairs',
-      ignoredOrphans: 'Ignored Orphans',
+      ignoredOrphans: 'Unmatched Files',
       totalVideos: 'Total Videos (.mp4)',
       totalImages: 'Total Images (PNG/JPG)',
-      screensaverPresent: 'Screensaver.mp4 Present (Idle loop ready)',
-      screensaverMissing: 'Screensaver.mp4 Missing (Fallback: Shuffle Slideshow)',
+      screensaverPresent: 'Screensaver.mp4 Ready (Idle loop active)',
+      screensaverMissing: 'Screensaver.mp4 Missing (Shuffle slideshow active)',
       scanErrors: (count: number) => `Scan Errors (${count})`,
     },
 
     testPlayback: {
       screensaverLabel: 'Screensaver.mp4 (Idle Video)',
       noVideos: 'No videos available',
-      hint: 'Select a video and tap Play to verify decode & sound',
+      hint: 'Select a clip and hit Play to test video & audio',
     },
 
     configKeys: {
@@ -138,13 +137,11 @@ export const STRINGS = {
     },
 
     exitDialog: {
-      title: 'Exit Kiosk Application?',
-      androidBody:
-        'Are you sure you want to exit Kiosk mode? This will stop kiosk lock and close the application to return to the Android launcher.',
-      desktopBody:
-        'Are you sure you want to exit Kiosk mode and return to the system desktop?',
+      title: 'Exit Kiosk Mode?',
+      androidBody: 'Exit kiosk lock and return to the Android home screen?',
+      desktopBody: 'Exit kiosk mode and return to the desktop?',
       cancel: 'Cancel',
-      confirm: 'Yes, Exit App',
+      confirm: 'Exit Kiosk',
     },
   },
 } as const;

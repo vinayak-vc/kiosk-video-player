@@ -270,7 +270,7 @@ impl MediaScanner {
                     ignored_orphan_count: 0,
                     video_count: 0,
                     image_count: 0,
-                    errors: vec![format!("Failed to read media directory '{}': {}", root_str, e)],
+                    errors: vec![format!("Could not read folder '{}': {}", root_str, e)],
                     root: root_str,
                 };
             }
@@ -282,7 +282,7 @@ impl MediaScanner {
         for entry_res in read_dir {
             if entries.len() >= MAX_ENTRIES {
                 errors.push(format!(
-                    "Folder has too many entries (limit {}); scan truncated",
+                    "Folder limit reached ({} files max); scan truncated",
                     MAX_ENTRIES
                 ));
                 break;

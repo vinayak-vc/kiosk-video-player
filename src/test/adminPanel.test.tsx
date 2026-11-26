@@ -191,7 +191,7 @@ describe('AdminPanelScreen (Phase 6 Admin & Diagnostics UI)', () => {
     expect(screen.getByTestId('stat-orphans-count').textContent).toBe('3');
     expect(screen.getByTestId('stat-videos-count').textContent).toBe('5');
     expect(screen.getByTestId('stat-images-count').textContent).toBe('4');
-    expect(screen.getByTestId('stat-screensaver-status').textContent).toContain('Present');
+    expect(screen.getByTestId('stat-screensaver-status').textContent).toContain('Ready');
     expect(screen.getByTestId('admin-scan-errors').textContent).toContain('Corrupted file header in bad.mp4');
   });
 
@@ -287,6 +287,6 @@ describe('AdminPanelScreen (Phase 6 Admin & Diagnostics UI)', () => {
     fireEvent.click(exitBtn);
 
     const modal = screen.getByTestId('admin-exit-modal');
-    expect(modal.textContent).toContain('Android launcher');
+    expect(modal.textContent).toContain('Android home screen');
   });
 });

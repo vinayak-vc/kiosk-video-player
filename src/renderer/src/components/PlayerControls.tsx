@@ -185,7 +185,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 <button
                   type="button"
                   className={styles.backButton}
-                  aria-label={STRINGS.player.backToGallery}
+                  aria-label={STRINGS.player.backToGalleryLabel}
                   onClick={(e) => {
                     e.stopPropagation();
                     onBack();

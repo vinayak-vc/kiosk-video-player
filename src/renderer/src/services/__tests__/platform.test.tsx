@@ -87,8 +87,8 @@ describe('Platform split (bridge.platform & desktop-only UI affordances)', () =>
         onRetry={() => {}}
       />,
     );
-    expect(screen.getByText('Storage Permission Required')).toBeTruthy();
-    const btn = screen.getByRole('button', { name: /grant file access/i });
+    expect(screen.getByText('Storage Access Needed')).toBeTruthy();
+    const btn = screen.getByRole('button', { name: /grant access/i });
     expect(btn).toBeTruthy();
   });
 });
