@@ -12,6 +12,7 @@ import { GalleryScreen } from '../screens/GalleryScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
 import { EmptyScreen } from '../screens/EmptyScreen';
+import { SlideshowScreen } from '../screens/SlideshowScreen';
 import { VideoPlayer } from '../components/VideoPlayer';
 import '../styles/global.css';
 import styles from './App.module.css';
@@ -250,6 +251,8 @@ export const App: React.FC = () => {
         }
         return <VideoPlayer item={selectedItem} />;
       }
+      case 'SLIDESHOW':
+        return <SlideshowScreen />;
       case 'GALLERY':
       default:
         if (items.length === 0) {
