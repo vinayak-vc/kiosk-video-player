@@ -224,6 +224,24 @@ export const SlideshowScreen: React.FC = () => {
         } else {
           setSlotBTrack(null);
         }
+
+        // Preload the track AFTER the following one so the inactive slot is
+        // ready before it becomes active. We peek via controller.peek() if
+        // available, otherwise we let the next advanceToNextTrack() handle it.
+        // This keeps the inactive <video> warm so crossfade starts from a
+        // decoded frame rather than a frozen/unloaded video.
+        if (!exitingRef.current && controllerRef.current) {
+          const upcoming = controllerRef.current.peek?.();
+          if (upcoming && !upcoming.isScreensaver) {
+            const inactiveVideo =
+              nextSlot === 'a' ? videoBRef.current : videoARef.current;
+            if (inactiveVideo && !inactiveVideo.src.includes(upcoming.url)) {
+              inactiveVideo.src = upcoming.url;
+              inactiveVideo.muted = true;
+              inactiveVideo.load();
+            }
+          }
+        }
       }, CROSSFADE_DURATION_MS);
     },
     []
@@ -270,13 +288,19 @@ export const SlideshowScreen: React.FC = () => {
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (e.isPrimary === false) return;
       if (exitingRef.current) return;
-      exitingRef.current = true;
 
+      // Dispatch FIRST — SLIDESHOW_TAP is never lockable, so this always
+      // succeeds from SLIDESHOW state. If (hypothetically) the transition is
+      // rejected we must NOT set exitingRef or release videos, otherwise the
+      // screen is permanently stranded on a black frame.
       void AudioService.resumeOnGesture();
       AudioService.play('return');
+      const accepted = dispatch('SLIDESHOW_TAP');
+      if (!accepted) return;
+
+      exitingRef.current = true;
       clearTimers();
       releaseAllVideos();
-      dispatch('SLIDESHOW_TAP', { lockDurationMs: 450 });
     },
     [clearTimers, releaseAllVideos, dispatch]
   );

@@ -141,6 +141,36 @@ describe('SlideshowScreen (P5-3)', () => {
     expect(videoA.getAttribute('src')).toBeNull();
   });
 
+  it('tap during 450 ms transition lock still exits slideshow (SLIDESHOW_TAP must never be lockable)', () => {
+    // The slideshow is entered via IDLE_TIMEOUT dispatched with lockDurationMs=450.
+    // A visitor who taps within that window must still reach GALLERY, not get a
+    // permanent black screen (exitingRef stuck + videos released + dispatch rejected).
+    useMediaStore.getState().setScanResult({
+      items: sampleItems,
+      screensaver: sampleScreensaver,
+      ignored_orphan_count: 0,
+      video_count: 2,
+      image_count: 2,
+      errors: [],
+      root: 'C:/Media',
+    });
+
+    // Simulate the 450 ms lock that is set when entering the SLIDESHOW state
+    useApplicationStore.getState().beginTransition(450);
+    expect(useApplicationStore.getState().isTransitionLocked).toBe(true);
+
+    render(<SlideshowScreen />);
+    const container = screen.getByTestId('slideshow-screen');
+
+    // Tap at t=100ms (lock still active)
+    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.pointerDown(container, { isPrimary: true });
+
+    // Must reach GALLERY — not stall on black screen
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+  });
+
   it('transitions to ERROR state if all slideshow videos fail', () => {
     useSettingsStore.setState((s) => ({
       config: { ...s.config, slideshow_mode: 'sequential' },

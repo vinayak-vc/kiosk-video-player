@@ -14,6 +14,8 @@ export interface SlideshowTrack {
 export interface SlideshowStrategy {
   readonly mode: SlideshowMode;
   next(): SlideshowTrack | null;
+  /** Peek at the next track without advancing the cursor. Used for preloading. */
+  peek(): SlideshowTrack | null;
   markFailed(id: string): void;
   updateMedia(
     items: MediaItem[],
@@ -48,6 +50,11 @@ export class ScreensaverStrategy implements SlideshowStrategy {
       muted: !this.screensaverSound,
       loop: true,
     };
+  }
+
+  peek(): SlideshowTrack | null {
+    // Screensaver loops in-place; the "next" track is always itself.
+    return this.next();
   }
 
   markFailed(id: string): void {
@@ -137,6 +144,20 @@ export class ShuffleBagStrategy implements SlideshowStrategy {
     };
   }
 
+  peek(): SlideshowTrack | null {
+    // Return the next item in the bag (or first of a fresh refill) without advancing.
+    const valid = this.bag.filter((item) => !this.failedIds.has(item.id));
+    if (valid.length > 0) {
+      const item = valid[0];
+      return { id: item.id, url: item.video_url, title: item.display_title, isScreensaver: false, muted: false, loop: false };
+    }
+    // Bag is empty; peek at what a refill would produce without committing
+    const pool = this.getValidPool();
+    if (pool.length === 0) return null;
+    const item = pool[0];
+    return { id: item.id, url: item.video_url, title: item.display_title, isScreensaver: false, muted: false, loop: false };
+  }
+
   markFailed(id: string): void {
     this.failedIds.add(id);
     this.bag = this.bag.filter((item) => item.id !== id);
@@ -194,6 +215,13 @@ export class SequentialStrategy implements SlideshowStrategy {
       muted: false,
       loop: false,
     };
+  }
+
+  peek(): SlideshowTrack | null {
+    const pool = this.items.filter((i) => !this.failedIds.has(i.id));
+    if (pool.length === 0) return null;
+    const item = pool[this.index % pool.length];
+    return { id: item.id, url: item.video_url, title: item.display_title, isScreensaver: false, muted: false, loop: false };
   }
 
   markFailed(id: string): void {
@@ -266,6 +294,11 @@ export class SlideshowController {
 
   getEffectiveMode(): SlideshowMode {
     return this.activeStrategy.mode;
+  }
+
+  /** Peek at the upcoming track without advancing the cursor. Used to preload the inactive <video> slot. */
+  peek(): SlideshowTrack | null {
+    return this.activeStrategy.peek();
   }
 
   next(): SlideshowTrack | null {

@@ -156,6 +156,27 @@ describe('useApplicationStore transition lock & logging', () => {
     expect(useApplicationStore.getState().state).toBe('ERROR');
   });
 
+  it('SLIDESHOW_TAP is never blocked by transition lock (early tap must not strand on black screen)', () => {
+    // The IDLE_TIMEOUT transition that enters the slideshow carries a 450 ms lock.
+    // A user tapping within those 450 ms must still be able to exit to GALLERY.
+    const store = useApplicationStore.getState();
+    store.dispatch('INIT_DONE');
+    store.dispatch('SCAN_OK');
+    // Enter slideshow state
+    store.dispatch('IDLE_TIMEOUT');
+    expect(useApplicationStore.getState().state).toBe('SLIDESHOW');
+
+    // Simulate the entry lock that would be set
+    store.beginTransition(450);
+    expect(useApplicationStore.getState().isTransitionLocked).toBe(true);
+
+    // Tap at t=100ms — lock still active, but SLIDESHOW_TAP must NOT be in LOCKABLE_EVENTS
+    vi.advanceTimersByTime(100);
+    const accepted = store.dispatch('SLIDESHOW_TAP');
+    expect(accepted).toBe(true);
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+  });
+
   it('clears previous lock timer when beginTransition is called again', () => {
     const store = useApplicationStore.getState();
     store.beginTransition(300);

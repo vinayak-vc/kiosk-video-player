@@ -68,10 +68,14 @@ export const TRANSITION_TABLE: Readonly<
  * Only user-originated navigation events are swallowed by the transition lock.
  * System events (`VIDEO_ENDED`, `IDLE_TIMEOUT`, `FATAL_ERROR`, `ADMIN_OPEN`) are
  * never blocked so a short/failing clip or idle timeout cannot strand the app.
+ *
+ * NOTE: `SLIDESHOW_TAP` is intentionally NOT in this set. The slideshow is entered
+ * with a short transition lock (450 ms) to prevent double-entry; a visitor who taps
+ * within that window must still be able to exit. Blocking the exit dispatch and
+ * setting exitingRef=true would leave the screen on a permanent black frame.
  */
 export const LOCKABLE_EVENTS: ReadonlySet<AppEvent> = new Set<AppEvent>([
   'SELECT_MEDIA',
-  'SLIDESHOW_TAP',
   'PLAYER_EXIT',
 ]);
 
