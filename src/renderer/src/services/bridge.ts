@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import type { MediaItem, AppConfig } from '../types';
+import type { ScanResult, AppConfig } from '../types';
 
 /**
  * bridge.ts
@@ -24,8 +24,8 @@ class TauriBridge {
     return invoke<string>('validate_media_folder_cmd', { path });
   }
 
-  async getMediaItems(): Promise<MediaItem[]> {
-    return invoke<MediaItem[]>('get_media_items');
+  async getMediaItems(): Promise<ScanResult> {
+    return invoke<ScanResult>('get_media_items');
   }
 
   async logClientMessage(level: 'INFO' | 'WARN' | 'ERROR', message: string): Promise<void> {

@@ -1,9 +1,10 @@
+use std::path::Path;
 use tauri::{command, AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 use crate::config::{
     validate_media_folder_structured, AppConfig, ConfigService, FolderValidationError,
 };
-use crate::media::MediaItem;
+use crate::media::{MediaScanner, ScanResult};
 use crate::logger::Logger;
 
 pub const MAX_LOG_MESSAGE_LEN: usize = 2000;
@@ -101,8 +102,20 @@ pub fn validate_media_folder_cmd(path: String) -> Result<String, FolderValidatio
 }
 
 #[command]
-pub fn get_media_items() -> Result<Vec<MediaItem>, String> {
-    Ok(Vec::new())
+pub fn get_media_items(
+    config_service: State<'_, ConfigService>,
+    logger: State<'_, Logger>,
+) -> Result<ScanResult, String> {
+    let cfg = config_service.get_config()?;
+    let result = MediaScanner::scan_directory(Path::new(&cfg.kiosk_media_root));
+    logger.info(&format!(
+        "Media scan on '{}': {} items, {} orphans ignored, {} errors",
+        result.root,
+        result.items.len(),
+        result.ignored_orphan_count,
+        result.errors.len()
+    ));
+    Ok(result)
 }
 
 #[command]

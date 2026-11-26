@@ -9,6 +9,13 @@ export interface MediaItem {
   file_size: number;
 }
 
+export interface ScanResult {
+  items: MediaItem[];
+  ignored_orphan_count: number;
+  errors: string[];
+  root: string;
+}
+
 export interface AppConfig {
   kiosk_media_root: string;
   idle_timeout_seconds: number;
