@@ -10,25 +10,46 @@ export interface MediaGridProps {
   onSelectMedia: (id: string) => void;
 }
 
+const CARD_WIDTH_PX = 360;
+const GRID_GAP_PX = 24;
+
+export interface GridLayoutInfo {
+  rows: number;
+  columns: number;
+}
+
 /**
- * Computes responsive grid columns for up to 4x2 layout:
- * ceil(n / 2) bounded to [1, 4], centering smaller sets.
+ * Computes balanced centered grid layout:
+ * - n <= 4: 1 centered row of n cards
+ * - n > 4: 2 centered rows with columns = ceil(n / 2) capped at 4
  */
+export function computeGridLayout(visibleCount: number): GridLayoutInfo {
+  if (visibleCount <= 0) return { rows: 1, columns: 1 };
+  if (visibleCount <= 4) {
+    return { rows: 1, columns: visibleCount };
+  }
+  return {
+    rows: 2,
+    columns: Math.min(4, Math.ceil(visibleCount / 2)),
+  };
+}
+
 export function computeGridColumns(visibleCount: number): number {
-  if (visibleCount <= 0) return 1;
-  return Math.min(4, Math.max(1, Math.ceil(visibleCount / 2)));
+  return computeGridLayout(visibleCount).columns;
 }
 
 export const MediaGrid: React.FC<MediaGridProps> = React.memo(
   ({ items, presets, onSelectMedia }) => {
-    const columns = computeGridColumns(items.length);
+    const { rows, columns } = computeGridLayout(items.length);
+    const maxWidth = columns * CARD_WIDTH_PX + Math.max(0, columns - 1) * GRID_GAP_PX;
 
     return (
       <div
         className={styles.grid}
-        style={{ gridTemplateColumns: `repeat(${columns}, auto)` }}
+        style={{ maxWidth: `${maxWidth}px` }}
         data-testid="media-grid"
         data-columns={columns}
+        data-rows={rows}
       >
         {items.map((item, idx) => (
           <MediaCard

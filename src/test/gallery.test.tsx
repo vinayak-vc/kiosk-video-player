@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GalleryScreen, slicePageItems } from '../renderer/src/screens/GalleryScreen';
-import { computeGridColumns } from '../renderer/src/components/MediaGrid';
+import { computeGridLayout } from '../renderer/src/components/MediaGrid';
 import { useApplicationStore } from '../renderer/src/stores/applicationStore';
 import { useMediaStore, computeTotalPages } from '../renderer/src/stores/mediaStore';
 import { usePlayerStore } from '../renderer/src/stores/playerStore';
@@ -33,12 +33,15 @@ describe('Gallery pagination & grid math', () => {
     expect(slicePageItems(items, 2, 8)).toHaveLength(4);
   });
 
-  it('computes grid columns = ceil(n/2) bounded to [1, 4]', () => {
-    expect(computeGridColumns(1)).toBe(1);
-    expect(computeGridColumns(2)).toBe(1);
-    expect(computeGridColumns(3)).toBe(2);
-    expect(computeGridColumns(5)).toBe(3);
-    expect(computeGridColumns(8)).toBe(4);
+  it('computes centered grid layout (rows & columns) for n=1..8', () => {
+    expect(computeGridLayout(1)).toEqual({ rows: 1, columns: 1 });
+    expect(computeGridLayout(2)).toEqual({ rows: 1, columns: 2 });
+    expect(computeGridLayout(3)).toEqual({ rows: 1, columns: 3 });
+    expect(computeGridLayout(4)).toEqual({ rows: 1, columns: 4 });
+    expect(computeGridLayout(5)).toEqual({ rows: 2, columns: 3 });
+    expect(computeGridLayout(6)).toEqual({ rows: 2, columns: 3 });
+    expect(computeGridLayout(7)).toEqual({ rows: 2, columns: 4 });
+    expect(computeGridLayout(8)).toEqual({ rows: 2, columns: 4 });
   });
 });
 
@@ -132,6 +135,53 @@ describe('GalleryScreen interactions', () => {
 
     expect(usePlayerStore.getState().selectedMediaId).toBe('video-2');
     expect(useApplicationStore.getState().state).toBe('INDIVIDUAL_PLAYER');
+  });
+
+  it('does not set selectedMediaId when dispatch is rejected by transition lock', () => {
+    useMediaStore.getState().setScanResult(
+      {
+        items: makeItems(3),
+        ignored_orphan_count: 0,
+        video_count: 3,
+        image_count: 3,
+        errors: [],
+        root: 'C:/Media',
+      },
+      8
+    );
+
+    useApplicationStore.getState().beginTransition(500);
+    render(<GalleryScreen />);
+    fireEvent.click(screen.getByRole('button', { name: 'Play Video 1' }));
+
+    expect(usePlayerStore.getState().selectedMediaId).toBeNull();
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+  });
+
+  it('does not trigger card selection when a click follows a horizontal swipe', () => {
+    useMediaStore.getState().setScanResult(
+      {
+        items: makeItems(12),
+        ignored_orphan_count: 0,
+        video_count: 12,
+        image_count: 12,
+        errors: [],
+        root: 'C:/Media',
+      },
+      8
+    );
+
+    render(<GalleryScreen />);
+    const gallery = screen.getByTestId('gallery-screen');
+
+    fireEvent.pointerDown(gallery, { clientX: 600, clientY: 300, pointerId: 1 });
+    fireEvent.pointerUp(gallery, { clientX: 440, clientY: 305, pointerId: 1 });
+    expect(useMediaStore.getState().currentPage).toBe(1);
+
+    // Browser fires trailing click on card underneath pointerUp
+    fireEvent.click(screen.getByRole('button', { name: 'Play Video 1' }));
+    expect(usePlayerStore.getState().selectedMediaId).toBeNull();
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
   });
 
   it('shows fallback tile on thumbnail error while keeping title visible', () => {
