@@ -34,3 +34,9 @@ target/
 .env
 .env*.local
 !.env.example
+
+# Android build outputs & sideload handover artifacts
+android-out/*
+!android-out/INSTALL.md
+*.apk
+*.aab
