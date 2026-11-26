@@ -32,7 +32,7 @@ pub fn run() {
                     let root = cfg_service
                         .get_config()
                         .map(|c| std::path::PathBuf::from(c.kiosk_media_root))
-                        .unwrap_or_else(|_| std::path::PathBuf::from("C:/Kiosk/Media"));
+                        .unwrap_or_else(|_| std::path::PathBuf::from(config::default_media_root()));
                     app.manage(cfg_service);
                     root
                 }
@@ -77,7 +77,9 @@ pub fn run() {
             commands::exit_kiosk_app,
             commands::trigger_admin_shortcut,
             commands::toggle_fullscreen,
-            commands::get_platform
+            commands::get_platform,
+            commands::check_storage_permission,
+            commands::request_storage_permission
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

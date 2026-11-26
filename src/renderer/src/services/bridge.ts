@@ -63,6 +63,14 @@ class TauriBridge {
     return invoke<boolean>('toggle_fullscreen');
   }
 
+  async checkStoragePermission(): Promise<boolean> {
+    return invoke<boolean>('check_storage_permission');
+  }
+
+  async requestStoragePermission(): Promise<void> {
+    return invoke<void>('request_storage_permission');
+  }
+
   async onAdminRequested(callback: () => void): Promise<UnlistenFn> {
     return listen('open-admin-panel', () => callback());
   }

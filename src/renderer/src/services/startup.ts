@@ -6,6 +6,19 @@ import { useSettingsStore } from '../stores/settingsStore';
 
 export async function performMediaScan(cardsPerPage?: number): Promise<void> {
   try {
+    if (
+      bridge.platform === 'android' &&
+      typeof bridge.checkStoragePermission === 'function'
+    ) {
+      const granted = await bridge.checkStoragePermission();
+      if (!granted) {
+        useApplicationStore.getState().setStoragePermissionDenied(true);
+        useApplicationStore.getState().dispatch('SCAN_OK');
+        return;
+      }
+      useApplicationStore.getState().setStoragePermissionDenied(false);
+    }
+
     const perPage = cardsPerPage ?? useSettingsStore.getState().config.cards_per_page;
     const scan = await useMediaStore.getState().refresh(perPage);
     if (scan && scan.errors.length > 0 && scan.items.length === 0) {
@@ -29,6 +42,22 @@ export async function executeStartup(isMounted: () => boolean = () => true): Pro
     if (!isMounted()) return;
     const cfg = await useSettingsStore.getState().loadConfig();
     if (!isMounted()) return;
+
+    if (
+      bridge.platform === 'android' &&
+      typeof bridge.checkStoragePermission === 'function'
+    ) {
+      const granted = await bridge.checkStoragePermission();
+      if (!isMounted()) return;
+      if (!granted) {
+        useApplicationStore.getState().setStoragePermissionDenied(true);
+        useApplicationStore.getState().dispatch('INIT_DONE');
+        useApplicationStore.getState().dispatch('SCAN_OK');
+        return;
+      }
+      useApplicationStore.getState().setStoragePermissionDenied(false);
+    }
+
     useApplicationStore.getState().dispatch('INIT_DONE');
     await performMediaScan(cfg?.cards_per_page ?? 8);
   } catch (err) {

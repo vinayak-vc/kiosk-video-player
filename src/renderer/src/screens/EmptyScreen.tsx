@@ -6,6 +6,7 @@ import { AudioService } from '../services/AudioService';
 import styles from './StateScreens.module.css';
 
 export type EmptyStateVariant =
+  | 'NO_PERMISSION'
   | 'NO_FOLDER'
   | 'EMPTY_FOLDER'
   | 'ONLY_VIDEOS'
@@ -16,9 +17,13 @@ export interface EmptyStateInput {
   root: string;
   videoCount: number;
   imageCount: number;
+  permissionDenied?: boolean;
 }
 
 export function classifyEmptyState(input: EmptyStateInput): EmptyStateVariant {
+  if (input.permissionDenied) {
+    return 'NO_PERMISSION';
+  }
   if (!input.root || input.root.trim() === '') {
     return 'NO_FOLDER';
   }
@@ -38,6 +43,10 @@ const EMPTY_COPY: Record<
   EmptyStateVariant,
   { title: string; description: string }
 > = {
+  NO_PERMISSION: {
+    title: 'Storage Permission Required',
+    description: 'Grant all-files access so Kiosk Video Player can read videos and thumbnails from external storage.',
+  },
   NO_FOLDER: {
     title: 'No Media Folder Configured',
     description: 'Select a folder containing matching .mp4 videos and .png/.jpg/.jpeg thumbnails.',
@@ -64,6 +73,8 @@ export interface EmptyScreenProps {
   root: string;
   videoCount: number;
   imageCount: number;
+  permissionDenied?: boolean;
+  onGrantPermission?: () => Promise<void> | void;
   onSelectFolder?: () => Promise<void> | void;
   onRetry: () => Promise<void> | void;
 }
@@ -72,13 +83,15 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
   root,
   videoCount,
   imageCount,
+  permissionDenied,
+  onGrantPermission,
   onSelectFolder,
   onRetry,
 }) => {
   const [busy, setBusy] = useState(false);
   const presets = useAnimationPresets();
 
-  const variant = classifyEmptyState({ root, videoCount, imageCount });
+  const variant = classifyEmptyState({ root, videoCount, imageCount, permissionDenied });
   const copy = EMPTY_COPY[variant];
 
   const renderIcon = () => {
@@ -89,6 +102,17 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
         return <ImageIcon size={44} />;
       default:
         return <FolderX size={44} />;
+    }
+  };
+
+  const handleGrant = async () => {
+    if (busy || !onGrantPermission) return;
+    AudioService.play('tap');
+    setBusy(true);
+    try {
+      await onGrantPermission();
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -130,16 +154,28 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
         {root && <div className={styles.pathChip}>{root}</div>}
 
         <div className={styles.actionsRow}>
-          {onSelectFolder && (
+          {variant === 'NO_PERMISSION' && onGrantPermission ? (
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={handleSelect}
+              onClick={handleGrant}
               disabled={busy}
             >
               <FolderOpen size={22} />
-              Select another folder
+              Grant file access
             </button>
+          ) : (
+            onSelectFolder && (
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={handleSelect}
+                disabled={busy}
+              >
+                <FolderOpen size={22} />
+                Select another folder
+              </button>
+            )
           )}
           <button
             type="button"

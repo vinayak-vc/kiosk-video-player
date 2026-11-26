@@ -18,6 +18,7 @@ import styles from './App.module.css';
 export const App: React.FC = () => {
   const appState = useApplicationStore((s) => s.state);
   const errorReason = useApplicationStore((s) => s.errorReason);
+  const storagePermissionDenied = useApplicationStore((s) => s.storagePermissionDenied);
   const dispatch = useApplicationStore((s) => s.dispatch);
   const items = useMediaStore((s) => s.items);
   const selectedMediaId = usePlayerStore((s) => s.selectedMediaId);
@@ -30,6 +31,10 @@ export const App: React.FC = () => {
     const curState = useApplicationStore.getState().state;
     useApplicationStore.getState().dispatch(curState === 'ERROR' ? 'RETRY' : 'SCAN_START');
     await performMediaScan();
+  }, []);
+
+  const handleGrantPermission = useCallback(async () => {
+    await bridge.requestStoragePermission();
   }, []);
 
   const handleSelectFolder = useCallback(async () => {
@@ -116,8 +121,40 @@ export const App: React.FC = () => {
       void handleMediaChangedEvent().catch(() => {});
     });
 
+    const handleResumePermissionCheck = () => {
+      if (
+        bridge.platform !== 'android' ||
+        !useApplicationStore.getState().storagePermissionDenied ||
+        typeof bridge.checkStoragePermission !== 'function'
+      ) {
+        return;
+      }
+      void bridge
+        .checkStoragePermission()
+        .then((granted) => {
+          if (granted && mounted) {
+            useApplicationStore.getState().setStoragePermissionDenied(false);
+            useApplicationStore.getState().dispatch('SCAN_START');
+            return performMediaScan();
+          }
+          return undefined;
+        })
+        .catch(() => {});
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handleResumePermissionCheck();
+      }
+    };
+
+    window.addEventListener('focus', handleResumePermissionCheck);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       mounted = false;
+      window.removeEventListener('focus', handleResumePermissionCheck);
+      document.removeEventListener('visibilitychange', handleVisibility);
       unlistenMedia.then((fn) => fn()).catch(() => {});
     };
   }, []);
@@ -182,6 +219,8 @@ export const App: React.FC = () => {
               root={mediaRoot || configRoot}
               videoCount={videoCount}
               imageCount={imageCount}
+              permissionDenied={storagePermissionDenied}
+              onGrantPermission={handleGrantPermission}
               onSelectFolder={selectFolderHandler}
               onRetry={handleRetryScan}
             />

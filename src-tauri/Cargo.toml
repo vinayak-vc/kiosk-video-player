@@ -22,6 +22,10 @@ notify = "8"
 [target.'cfg(not(target_os = "android"))'.dependencies]
 tauri-plugin-dialog = "2"
 
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+ndk-context = "0.1"
+
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.39.1"
 windows-core = "0.62.2"

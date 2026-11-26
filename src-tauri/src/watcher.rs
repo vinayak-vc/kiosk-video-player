@@ -7,6 +7,33 @@ use tauri::{AppHandle, Emitter};
 
 pub const DEFAULT_DEBOUNCE_MS: u64 = 500;
 pub const DEFAULT_REATTACH_POLL_MS: u64 = 2000;
+pub const DEFAULT_POLL_RESCAN_MS: u64 = 5000;
+
+/// Computes a deterministic directory listing signature (sorted `(name, size, modified_nanos)`)
+/// for non-recursive poll-rescan fallback on filesystems where inotify/FUSE misses events.
+pub fn compute_dir_signature(dir: &Path) -> Option<Vec<(String, u64, u128)>> {
+    let entries = std::fs::read_dir(dir).ok()?;
+    let mut sig = Vec::new();
+    for entry in entries.flatten() {
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if !meta.is_file() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        let len = meta.len();
+        let modified = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        sig.push((name, len, modified));
+    }
+    sig.sort();
+    Some(sig)
+}
 
 enum WatcherMsg {
     SetTarget(PathBuf),
@@ -79,6 +106,9 @@ impl MediaWatcher {
                 );
             }
 
+            let mut last_sig = compute_dir_signature(&desired_target);
+            let mut last_poll_rescan = Instant::now();
+            let poll_rescan_interval = Duration::from_millis(DEFAULT_POLL_RESCAN_MS.max(reattach_poll_ms));
             let mut pending_deadline: Option<Instant> = None;
 
             loop {
@@ -96,6 +126,8 @@ impl MediaWatcher {
                         pending_deadline = None;
                         desired_target = new_root;
                         attached = try_attach(&mut watcher, &desired_target, &on_log);
+                        last_sig = compute_dir_signature(&desired_target);
+                        last_poll_rescan = Instant::now();
                         if !attached {
                             on_log(
                                 "WARN",
@@ -146,17 +178,22 @@ impl MediaWatcher {
                         break;
                     }
                     Err(RecvTimeoutError::Timeout) => {
+                        let mut emitted_change = false;
                         if let Some(deadline) = pending_deadline
                             && Instant::now() >= deadline
                         {
                             pending_deadline = None;
+                            last_sig = compute_dir_signature(&desired_target);
+                            last_poll_rescan = Instant::now();
                             on_change();
+                            emitted_change = true;
                         }
 
                         if attached && (!desired_target.exists() || !desired_target.is_dir()) {
                             let _ = watcher.unwatch(&desired_target);
                             attached = false;
                             pending_deadline = None;
+                            last_sig = None;
                             on_log(
                                 "WARN",
                                 &format!(
@@ -171,6 +208,8 @@ impl MediaWatcher {
                             && try_attach(&mut watcher, &desired_target, &on_log)
                         {
                             attached = true;
+                            last_sig = compute_dir_signature(&desired_target);
+                            last_poll_rescan = Instant::now();
                             on_log(
                                 "INFO",
                                 &format!(
@@ -179,6 +218,23 @@ impl MediaWatcher {
                                 ),
                             );
                             on_change();
+                        } else if !emitted_change
+                            && pending_deadline.is_none()
+                            && last_poll_rescan.elapsed() >= poll_rescan_interval
+                        {
+                            last_poll_rescan = Instant::now();
+                            let current_sig = compute_dir_signature(&desired_target);
+                            if current_sig != last_sig {
+                                last_sig = current_sig;
+                                on_log(
+                                    "INFO",
+                                    &format!(
+                                        "MediaWatcher poll-rescan detected directory change in {:?}",
+                                        desired_target
+                                    ),
+                                );
+                                on_change();
+                            }
                         }
                     }
                     Err(RecvTimeoutError::Disconnected) => break,
@@ -378,5 +434,26 @@ mod tests {
         );
 
         drop(watcher);
+    }
+
+    #[test]
+    fn test_compute_dir_signature_detects_add_remove_and_size_changes() {
+        let dir = TempDirGuard::new("sig");
+        let s0 = compute_dir_signature(&dir.path).unwrap();
+        assert!(s0.is_empty());
+
+        let file_a = dir.path.join("Video With Spaces.mp4");
+        fs::write(&file_a, b"abc").unwrap();
+        let s1 = compute_dir_signature(&dir.path).unwrap();
+        assert_eq!(s1.len(), 1);
+        assert_ne!(s0, s1);
+
+        fs::write(&file_a, b"abcdef").unwrap();
+        let s2 = compute_dir_signature(&dir.path).unwrap();
+        assert_ne!(s1, s2);
+
+        fs::remove_file(&file_a).unwrap();
+        let s3 = compute_dir_signature(&dir.path).unwrap();
+        assert_eq!(s3, s0);
     }
 }

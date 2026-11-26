@@ -18,10 +18,21 @@ pub struct AppConfig {
     pub return_to_gallery_on_end: bool,
 }
 
+pub fn default_media_root() -> String {
+    #[cfg(target_os = "android")]
+    {
+        "/storage/emulated/0/Kiosk/Media".to_string()
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        "C:/Kiosk/Media".to_string()
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            kiosk_media_root: "C:/Kiosk/Media".to_string(),
+            kiosk_media_root: default_media_root(),
             idle_timeout_seconds: 60,
             controls_auto_hide_seconds: 4,
             slideshow_mode: "shuffle".to_string(),
@@ -133,31 +144,48 @@ const KNOWN_ENV_KEYS: &[&str] = &[
 /// - In debug/dev builds: checks current working dir and its parent (project root) first, then beside exe.
 /// - In release builds: beside the executable.
 pub fn resolve_env_path() -> Option<PathBuf> {
-    if cfg!(debug_assertions)
-        && let Ok(cwd) = std::env::current_dir()
+    #[cfg(target_os = "android")]
     {
-        let candidate = cwd.join(".env");
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-        if let Some(parent) = cwd.parent() {
-            let parent_candidate = parent.join(".env");
-            if parent_candidate.is_file() {
-                return Some(parent_candidate);
+        for candidate in [
+            "/storage/emulated/0/Kiosk/kiosk.env",
+            "/sdcard/Kiosk/kiosk.env",
+        ] {
+            let p = PathBuf::from(candidate);
+            if p.is_file() {
+                return Some(p);
             }
         }
+        return None;
     }
 
-    if let Ok(exe) = std::env::current_exe()
-        && let Some(exe_dir) = exe.parent()
+    #[cfg(not(target_os = "android"))]
     {
-        let exe_env = exe_dir.join(".env");
-        if exe_env.is_file() {
-            return Some(exe_env);
+        if cfg!(debug_assertions)
+            && let Ok(cwd) = std::env::current_dir()
+        {
+            let candidate = cwd.join(".env");
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+            if let Some(parent) = cwd.parent() {
+                let parent_candidate = parent.join(".env");
+                if parent_candidate.is_file() {
+                    return Some(parent_candidate);
+                }
+            }
         }
-    }
 
-    None
+        if let Ok(exe) = std::env::current_exe()
+            && let Some(exe_dir) = exe.parent()
+        {
+            let exe_env = exe_dir.join(".env");
+            if exe_env.is_file() {
+                return Some(exe_env);
+            }
+        }
+
+        None
+    }
 }
 
 fn parse_bool(val: &str) -> Option<bool> {

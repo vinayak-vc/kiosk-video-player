@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { invoke } from '@tauri-apps/api/core';
 import { bridge } from '../bridge';
 import { PlayerControls } from '../../components/PlayerControls';
+import { EmptyScreen } from '../../screens/EmptyScreen';
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
@@ -72,5 +73,22 @@ describe('Platform split (bridge.platform & desktop-only UI affordances)', () =>
       />,
     );
     expect(screen.getByRole('button', { name: /fullscreen/i })).toBeTruthy();
+  });
+
+  it('renders Grant file access button when permissionDenied is true on EmptyScreen', () => {
+    const onGrant = vi.fn();
+    render(
+      <EmptyScreen
+        root="/storage/emulated/0/Kiosk/Media"
+        videoCount={0}
+        imageCount={0}
+        permissionDenied={true}
+        onGrantPermission={onGrant}
+        onRetry={() => {}}
+      />,
+    );
+    expect(screen.getByText('Storage Permission Required')).toBeTruthy();
+    const btn = screen.getByRole('button', { name: /grant file access/i });
+    expect(btn).toBeTruthy();
   });
 });

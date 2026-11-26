@@ -13,6 +13,8 @@ export interface ApplicationStoreState {
   previousState: ApplicationState | null;
   errorReason: string | null;
   isTransitionLocked: boolean;
+  storagePermissionDenied: boolean;
+  setStoragePermissionDenied: (denied: boolean) => void;
   dispatch: (event: AppEvent, options?: DispatchOptions) => boolean;
   beginTransition: (durationMs: number) => void;
   releaseTransition: () => void;
@@ -45,6 +47,9 @@ export const useApplicationStore = create<ApplicationStoreState>((set, get) => (
   previousState: null,
   errorReason: null,
   isTransitionLocked: false,
+  storagePermissionDenied: false,
+
+  setStoragePermissionDenied: (denied: boolean) => set({ storagePermissionDenied: denied }),
 
   beginTransition: (durationMs: number) => {
     clearLockTimer();
@@ -108,6 +113,7 @@ export const useApplicationStore = create<ApplicationStoreState>((set, get) => (
       previousState: null,
       errorReason: null,
       isTransitionLocked: false,
+      storagePermissionDenied: false,
     });
   },
 }));

@@ -1,4 +1,6 @@
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
+#[cfg(not(target_os = "android"))]
+use tauri::Manager;
 #[cfg(windows)]
 use crate::logger::Logger;
 
