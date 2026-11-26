@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
+import { STRINGS } from '../strings';
 import styles from './StateScreens.module.css';
 
 export interface LoadingScreenProps {
@@ -8,7 +9,7 @@ export interface LoadingScreenProps {
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  message = 'Preparing Media Library...',
+  message = STRINGS.loading.message,
 }) => {
   return (
     <section className={styles.screenContainer} data-testid="loading-screen">
@@ -20,7 +21,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         >
           <Play size={40} fill="currentColor" />
         </motion.div>
-        <h1 className={styles.title}>Kiosk Video Player</h1>
+        <h1 className={styles.title}>{STRINGS.app.name}</h1>
         <p className={styles.description}>{message}</p>
         <div className={styles.loadingBarTrack} aria-hidden="true">
           <motion.div

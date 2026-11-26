@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { bridge } from '../services/bridge';
 import { usePlayerStore } from '../stores/playerStore';
+import { STRINGS } from '../strings';
 
 export const LOAD_WATCHDOG_MS = 10_000;
 export const STALL_WATCHDOG_MS = 15_000;
@@ -86,7 +87,7 @@ export function useVideoPlayback({
     // Load watchdog: never leave visitor on an infinite black/spinner screen
     let watchdogId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       if (disposed) return;
-      const msg = 'Video failed to load within 10 seconds';
+      const msg = STRINGS.player.loadWatchdogError;
       setIsBuffering(false);
       setPlaybackError(msg);
       void Promise.resolve(
@@ -110,7 +111,7 @@ export function useVideoPlayback({
       }
       if (Date.now() - lastProgressAtMs >= STALL_WATCHDOG_MS) {
         clearInterval(stallIntervalId);
-        const msg = 'Video playback stalled';
+        const msg = STRINGS.player.stallError;
         setIsBuffering(false);
         setPlaybackError(msg);
         usePlayerStore.getState().setPlaying(false);
@@ -194,7 +195,7 @@ export function useVideoPlayback({
       setIsBuffering(false);
       const code = video.error?.code ?? 0;
       const detail = video.error?.message || `MediaError code ${code}`;
-      const msg = `Unable to play this video (code ${code})`;
+      const msg = STRINGS.player.unableToPlay(code);
       setPlaybackError(msg);
       usePlayerStore.getState().setPlaying(false);
       void Promise.resolve(

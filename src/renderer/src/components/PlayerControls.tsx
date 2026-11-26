@@ -4,11 +4,12 @@ import { ArrowLeft, Maximize2, Minimize2, Pause, Play, Volume2, VolumeX } from '
 import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { AudioService } from '../services/AudioService';
 import { bridge } from '../services/bridge';
+import { STRINGS } from '../strings';
 import styles from './PlayerControls.module.css';
 
 export function formatTime(seconds: number, isKnown = true): string {
   if (!isKnown || !Number.isFinite(seconds) || seconds < 0) {
-    return '--:--';
+    return STRINGS.player.unknownDuration;
   }
   const totalSec = Math.floor(seconds);
   const hrs = Math.floor(totalSec / 3600);
@@ -80,6 +81,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
   const handleTimelinePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (e.isPrimary === false) return;
     if (!isDurationKnown || duration <= 0) return;
 
     isDraggingRef.current = true;
@@ -94,6 +96,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
   const handleTimelinePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (e.isPrimary === false) return;
     if (!isDraggingRef.current || !isDurationKnown || duration <= 0) return;
 
     const next = computeTimeFromPointer(e.clientX);
@@ -115,6 +118,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
   const handleTimelinePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (e.isPrimary === false) return;
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     e.currentTarget.releasePointerCapture?.(e.pointerId);
@@ -148,7 +152,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             <motion.button
               type="button"
               className={styles.centerIndicator}
-              aria-label="Resume playback"
+              aria-label={STRINGS.player.resumePlayback}
               data-testid="center-play-indicator"
               variants={presets.controlReveal}
               initial="hidden"
@@ -181,14 +185,14 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 <button
                   type="button"
                   className={styles.backButton}
-                  aria-label="Back to gallery"
+                  aria-label={STRINGS.player.backToGallery}
                   onClick={(e) => {
                     e.stopPropagation();
                     onBack();
                   }}
                 >
                   <ArrowLeft size={22} />
-                  Back
+                  {STRINGS.player.back}
                 </button>
                 <div className={styles.titleBadge}>{title}</div>
               </motion.div>
@@ -205,7 +209,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 <div
                   ref={trackRef}
                   role="slider"
-                  aria-label="Seek timeline"
+                  aria-label={STRINGS.player.seekTimeline}
                   aria-valuemin={0}
                   aria-valuemax={isDurationKnown ? Math.floor(duration) : 0}
                   aria-valuenow={isDurationKnown ? Math.floor(displayedTime) : 0}
@@ -236,7 +240,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     <button
                       type="button"
                       className={styles.iconButton}
-                      aria-label={isPlaying ? 'Pause' : 'Play'}
+                      aria-label={isPlaying ? STRINGS.player.pause : STRINGS.player.play}
                       onClick={(e) => {
                         e.stopPropagation();
                         AudioService.play('tap');
@@ -257,7 +261,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                       <button
                         type="button"
                         className={styles.iconButton}
-                        aria-label={isMuted ? 'Unmute' : 'Mute'}
+                        aria-label={isMuted ? STRINGS.player.unmute : STRINGS.player.mute}
                         onClick={(e) => {
                           e.stopPropagation();
                           AudioService.play('tap');
@@ -270,7 +274,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
                       <input
                         type="range"
-                        aria-label="Volume"
+                        aria-label={STRINGS.player.volume}
                         min={0}
                         max={1}
                         step={0.05}
@@ -289,7 +293,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                       <button
                         type="button"
                         className={styles.iconButton}
-                        aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                        aria-label={isFullscreen ? STRINGS.player.exitFullscreen : STRINGS.player.enterFullscreen}
                         onClick={(e) => {
                           e.stopPropagation();
                           AudioService.play('tap');

@@ -9,12 +9,10 @@ import { usePlayerStore } from '../stores/playerStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { MediaGrid } from '../components/MediaGrid';
 import { PageIndicator } from '../components/PageIndicator';
+import { STRINGS } from '../strings';
 import styles from './GalleryScreen.module.css';
 
-export const GALLERY_HEADING = {
-  prefix: 'Explore Our',
-  highlight: 'Amazing Content',
-} as const;
+export const GALLERY_HEADING = STRINGS.gallery.heading;
 
 export const SWIPE_THRESHOLD_PX = 80;
 
@@ -140,7 +138,7 @@ export const GalleryScreen: React.FC = () => {
           <button
             type="button"
             className={styles.navButton}
-            aria-label="Previous page"
+            aria-label={STRINGS.gallery.prevPageLabel}
             disabled={currentPage <= 0}
             onClick={() => goToPage(currentPage - 1)}
           >
@@ -172,7 +170,7 @@ export const GalleryScreen: React.FC = () => {
           <button
             type="button"
             className={styles.navButton}
-            aria-label="Next page"
+            aria-label={STRINGS.gallery.nextPageLabel}
             disabled={currentPage >= totalPages - 1}
             onClick={() => goToPage(currentPage + 1)}
           >

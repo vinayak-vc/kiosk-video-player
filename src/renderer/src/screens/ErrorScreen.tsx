@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, FolderOpen, RefreshCw } from 'lucide-react';
 import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { AudioService } from '../services/AudioService';
+import { STRINGS } from '../strings';
 import styles from './StateScreens.module.css';
 
 export interface ErrorScreenProps {
@@ -55,8 +56,8 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
         <div className={`${styles.iconRing} ${styles.iconRingError}`}>
           <AlertTriangle size={44} />
         </div>
-        <h1 className={styles.title}>Unable to Load Media</h1>
-        <p className={styles.description}>{errorReason}</p>
+        <h1 className={styles.title}>{STRINGS.error.title}</h1>
+        <p className={styles.description}>{errorReason || STRINGS.error.defaultReason}</p>
         {mediaRoot && <div className={styles.pathChip}>{mediaRoot}</div>}
 
         <div className={styles.actionsRow}>
@@ -68,7 +69,7 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
               disabled={busy}
             >
               <FolderOpen size={22} />
-              Select another folder
+              {STRINGS.error.selectFolderButton}
             </button>
           )}
           <button
@@ -78,7 +79,7 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
             disabled={busy}
           >
             <RefreshCw size={20} />
-            Retry
+            {STRINGS.error.retryButton}
           </button>
         </div>
       </div>

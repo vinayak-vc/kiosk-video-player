@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Film, FolderOpen, FolderX, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { AudioService } from '../services/AudioService';
+import { STRINGS } from '../strings';
 import styles from './StateScreens.module.css';
 
 export type EmptyStateVariant =
@@ -43,30 +44,12 @@ const EMPTY_COPY: Record<
   EmptyStateVariant,
   { title: string; description: string }
 > = {
-  NO_PERMISSION: {
-    title: 'Storage Permission Required',
-    description: 'Grant all-files access so Kiosk Video Player can read videos and thumbnails from external storage.',
-  },
-  NO_FOLDER: {
-    title: 'No Media Folder Configured',
-    description: 'Select a folder containing matching .mp4 videos and .png/.jpg/.jpeg thumbnails.',
-  },
-  EMPTY_FOLDER: {
-    title: 'Media Folder Is Empty',
-    description: 'Add matching <name>.mp4 and <name>.png (or .jpg/.jpeg) pairs to the root of this folder.',
-  },
-  ONLY_VIDEOS: {
-    title: 'Thumbnails Missing',
-    description: 'MP4 videos were found, but each video requires a matching .png, .jpg, or .jpeg thumbnail with the same filename.',
-  },
-  ONLY_IMAGES: {
-    title: 'Videos Missing',
-    description: 'Images were found, but each thumbnail requires a matching .mp4 video with the same filename.',
-  },
-  NO_VALID_PAIRS: {
-    title: 'No Matching Video Pairs',
-    description: 'Videos and images exist in this folder, but none share the same filename.',
-  },
+  NO_PERMISSION: STRINGS.empty.NO_PERMISSION,
+  NO_FOLDER: STRINGS.empty.NO_FOLDER,
+  EMPTY_FOLDER: STRINGS.empty.EMPTY_FOLDER,
+  ONLY_VIDEOS: STRINGS.empty.ONLY_VIDEOS,
+  ONLY_IMAGES: STRINGS.empty.ONLY_IMAGES,
+  NO_VALID_PAIRS: STRINGS.empty.NO_VALID_PAIRS,
 };
 
 export interface EmptyScreenProps {
@@ -162,7 +145,7 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
               disabled={busy}
             >
               <FolderOpen size={22} />
-              Grant file access
+              {STRINGS.empty.grantButton}
             </button>
           ) : (
             onSelectFolder && (
@@ -173,7 +156,7 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
                 disabled={busy}
               >
                 <FolderOpen size={22} />
-                Select another folder
+                {STRINGS.empty.selectFolderButton}
               </button>
             )
           )}
@@ -184,7 +167,7 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
             disabled={busy}
           >
             <RefreshCw size={20} />
-            Retry
+            {STRINGS.empty.retryButton}
           </button>
         </div>
       </div>

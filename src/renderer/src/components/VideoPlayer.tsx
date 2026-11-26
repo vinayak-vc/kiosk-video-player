@@ -12,6 +12,7 @@ import { useApplicationStore } from '../stores/applicationStore';
 import { usePlayerStore } from '../stores/playerStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { PlayerControls } from './PlayerControls';
+import { STRINGS } from '../strings';
 import styles from './VideoPlayer.module.css';
 
 export interface VideoPlayerProps {
@@ -192,7 +193,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
               onClick={handleErrorBackToGallery}
             >
               <ArrowLeft size={20} />
-              Back to gallery
+              {STRINGS.player.backToGallery}
             </button>
           </div>
         </div>

@@ -21,6 +21,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { performMediaScan } from '../services/startup';
 import { executeFolderChangeFlow } from '../services/folderChange';
 import type { MediaItem } from '../types';
+import { STRINGS } from '../strings';
 import styles from './AdminPanelScreen.module.css';
 
 interface AdminPanelScreenProps {
@@ -160,8 +161,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
     >
       <header className={styles.header}>
         <div className={styles.headerInfo}>
-          <h1>ADMIN & SYSTEM DIAGNOSTICS</h1>
-          <p>Kiosk configuration, library integrity metrics, folder management, and hardware test playback.</p>
+          <h1>{STRINGS.admin.title}</h1>
+          <p>{STRINGS.admin.subtitle}</p>
         </div>
         <div className={styles.headerActions}>
           <button
@@ -169,10 +170,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
             className={styles.closeButton}
             onClick={handleClose}
             data-testid="admin-close-button"
-            aria-label="Close Admin Panel"
+            aria-label={STRINGS.admin.closeAriaLabel}
           >
             <X size={20} />
-            <span>Return to Gallery</span>
+            <span>{STRINGS.admin.returnToGallery}</span>
           </button>
         </div>
       </header>
@@ -184,7 +185,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
           <section className={styles.card}>
             <div className={styles.cardHeader}>
               <Folder size={22} />
-              <span>Media Root Directory</span>
+              <span>{STRINGS.admin.sections.mediaRoot}</span>
             </div>
             <div className={styles.folderRow}>
               <input
@@ -201,7 +202,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 onClick={handleValidateOnly}
                 data-testid="admin-validate-button"
               >
-                Validate
+                {STRINGS.admin.actions.validate}
               </button>
               <button
                 type="button"
@@ -210,7 +211,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 disabled={isRescanning}
                 data-testid="admin-save-folder-button"
               >
-                {isRescanning ? 'Scanning...' : 'Apply & Rescan'}
+                {isRescanning ? 'Scanning...' : STRINGS.admin.actions.applyAndRescan}
               </button>
             </div>
 
@@ -223,11 +224,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                   data-testid="admin-pick-folder-button"
                 >
                   <Folder size={16} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
-                  Browse System Folder
+                  {STRINGS.admin.actions.browse}
                 </button>
               ) : (
                 <div className={styles.androidFolderHint} data-testid="admin-android-hint">
-                  Copy files to <code>/storage/emulated/0/Kiosk/Media</code> or configure <code>KIOSK_MEDIA_ROOT</code> in kiosk.env
+                  {STRINGS.admin.androidFolderHint}
                 </div>
               )}
               <button
@@ -238,7 +239,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 data-testid="admin-rescan-button"
               >
                 <RefreshCw size={16} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
-                Force Rescan
+                {STRINGS.admin.actions.forceRescan}
               </button>
             </div>
 
@@ -258,17 +259,17 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
           <section className={styles.card}>
             <div className={styles.cardHeader}>
               <Database size={22} />
-              <span>Library Integrity & File Counts</span>
+              <span>{STRINGS.admin.sections.integrity}</span>
             </div>
             <div className={styles.statsGrid}>
               <div className={styles.statTile}>
-                <div className={styles.statLabel}>Playable Pairs</div>
+                <div className={styles.statLabel}>{STRINGS.admin.stats.playablePairs}</div>
                 <div className={`${styles.statValue} ${styles.statValueCyan}`} data-testid="stat-pairs-count">
                   {items.length}
                 </div>
               </div>
               <div className={styles.statTile}>
-                <div className={styles.statLabel}>Ignored Orphans</div>
+                <div className={styles.statLabel}>{STRINGS.admin.stats.ignoredOrphans}</div>
                 <div
                   className={`${styles.statValue} ${orphanCount > 0 ? styles.statValueWarning : styles.statValueSuccess}`}
                   data-testid="stat-orphans-count"
@@ -277,13 +278,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 </div>
               </div>
               <div className={styles.statTile}>
-                <div className={styles.statLabel}>Total Videos (.mp4)</div>
+                <div className={styles.statLabel}>{STRINGS.admin.stats.totalVideos}</div>
                 <div className={styles.statValue} data-testid="stat-videos-count">
                   {videoCount}
                 </div>
               </div>
               <div className={styles.statTile}>
-                <div className={styles.statLabel}>Total Images (PNG/JPG)</div>
+                <div className={styles.statLabel}>{STRINGS.admin.stats.totalImages}</div>
                 <div className={styles.statValue} data-testid="stat-images-count">
                   {imageCount}
                 </div>
@@ -295,14 +296,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 <>
                   <CheckCircle size={18} color="#34d399" />
                   <span style={{ color: '#34d399' }} data-testid="stat-screensaver-status">
-                    Screensaver.mp4 Present (Idle loop ready)
+                    {STRINGS.admin.stats.screensaverPresent}
                   </span>
                 </>
               ) : (
                 <>
                   <AlertTriangle size={18} color="#fbbf24" />
                   <span style={{ color: '#fbbf24' }} data-testid="stat-screensaver-status">
-                    Screensaver.mp4 Missing (Fallback: Shuffle Slideshow)
+                    {STRINGS.admin.stats.screensaverMissing}
                   </span>
                 </>
               )}
@@ -310,9 +311,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
 
             {scanErrors && scanErrors.length > 0 && (
               <div className={styles.errorsBox} data-testid="admin-scan-errors">
-                <div style={{ fontWeight: 600, marginBottom: '6px' }}>Scan Errors ({scanErrors.length}):</div>
+                <div style={{ fontWeight: 600, marginBottom: '6px' }}>{STRINGS.admin.stats.scanErrors(scanErrors.length)}:</div>
                 {scanErrors.map((err, idx) => (
-                  <div key={idx}>â€¢ {err}</div>
+                  <div key={idx}>• {err}</div>
                 ))}
               </div>
             )}
@@ -325,7 +326,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
           <section className={styles.card}>
             <div className={styles.cardHeader}>
               <Play size={22} />
-              <span>Test Video Playback</span>
+              <span>{STRINGS.admin.sections.testPlayback}</span>
             </div>
             <div className={styles.testPlayerContainer}>
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -338,7 +339,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                   }}
                   data-testid="admin-test-clip-select"
                 >
-                  {screensaver && <option value="__screensaver__">Screensaver.mp4 (Idle Video)</option>}
+                  {screensaver && <option value="__screensaver__">{STRINGS.admin.testPlayback.screensaverLabel}</option>}
                   {items.map((item: MediaItem) => (
                     <option key={item.id} value={item.id}>
                       {item.display_title} ({item.filename})
@@ -346,7 +347,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                   ))}
                   {items.length === 0 && !screensaver && (
                     <option value="" disabled>
-                      No videos available
+                      {STRINGS.admin.testPlayback.noVideos}
                     </option>
                   )}
                 </select>
@@ -360,7 +361,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                     data-testid="admin-test-play-button"
                   >
                     <Play size={16} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
-                    Play
+                    {STRINGS.admin.actions.play}
                   </button>
                 ) : (
                   <button
@@ -370,7 +371,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                     data-testid="admin-test-stop-button"
                   >
                     <Square size={16} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
-                    Stop
+                    {STRINGS.admin.actions.stop}
                   </button>
                 )}
               </div>
@@ -389,7 +390,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 ) : (
                   <div className={styles.testVideoPlaceholder}>
                     <Play size={36} color="rgba(255, 255, 255, 0.2)" />
-                    <span>Select a video and tap Play to verify decode & sound</span>
+                    <span>{STRINGS.admin.testPlayback.hint}</span>
                   </div>
                 )}
               </div>
@@ -400,36 +401,36 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
           <section className={styles.card}>
             <div className={styles.cardHeader}>
               <Monitor size={22} />
-              <span>Device & Configuration Info</span>
+              <span>{STRINGS.admin.sections.deviceInfo}</span>
             </div>
             <table className={styles.infoTable}>
               <tbody>
                 <tr>
-                  <td className={styles.infoLabel}>Platform</td>
+                  <td className={styles.infoLabel}>{STRINGS.admin.configKeys.platform}</td>
                   <td className={styles.infoVal} data-testid="info-platform">{bridge.platform.toUpperCase()}</td>
                 </tr>
                 <tr>
-                  <td className={styles.infoLabel}>Cards Per Page</td>
+                  <td className={styles.infoLabel}>{STRINGS.admin.configKeys.cardsPerPage}</td>
                   <td className={styles.infoVal}>{config.cards_per_page}</td>
                 </tr>
                 <tr>
-                  <td className={styles.infoLabel}>Idle Timeout</td>
+                  <td className={styles.infoLabel}>{STRINGS.admin.configKeys.idleTimeout}</td>
                   <td className={styles.infoVal}>{config.idle_timeout_seconds}s</td>
                 </tr>
                 <tr>
-                  <td className={styles.infoLabel}>Controls Auto-Hide</td>
+                  <td className={styles.infoLabel}>{STRINGS.admin.configKeys.controlsAutoHide}</td>
                   <td className={styles.infoVal}>{config.controls_auto_hide_seconds}s</td>
                 </tr>
                 <tr>
-                  <td className={styles.infoLabel}>Slideshow Mode</td>
+                  <td className={styles.infoLabel}>{STRINGS.admin.configKeys.slideshowMode}</td>
                   <td className={styles.infoVal}>{config.slideshow_mode}</td>
                 </tr>
                 <tr>
-                  <td className={styles.infoLabel}>Screensaver Sound</td>
+                  <td className={styles.infoLabel}>{STRINGS.admin.configKeys.screensaverSound}</td>
                   <td className={styles.infoVal}>{config.screensaver_sound ? 'Audible' : 'Muted'}</td>
                 </tr>
                 <tr>
-                  <td className={styles.infoLabel}>Sound Effects (SFX)</td>
+                  <td className={styles.infoLabel}>{STRINGS.admin.configKeys.sfxEnabled}</td>
                   <td className={styles.infoVal}>{config.sfx_enabled ? 'Enabled' : 'Disabled'}</td>
                 </tr>
               </tbody>
@@ -443,7 +444,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 data-testid="admin-exit-app-button"
               >
                 <LogOut size={16} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />
-                Exit Kiosk Application
+                {STRINGS.admin.actions.exitKiosk}
               </button>
             </div>
           </section>
@@ -454,11 +455,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
       {showExitConfirm && (
         <div className={styles.modalBackdrop} data-testid="admin-exit-modal">
           <div className={styles.modalBox}>
-            <h2>Exit Kiosk Application?</h2>
+            <h2>{STRINGS.admin.exitDialog.title}</h2>
             <p>
               {bridge.platform === 'android'
-                ? 'Are you sure you want to exit Kiosk mode? This will stop kiosk lock and close the application to return to the Android launcher.'
-                : 'Are you sure you want to exit Kiosk mode and return to the system desktop?'}
+                ? STRINGS.admin.exitDialog.androidBody
+                : STRINGS.admin.exitDialog.desktopBody}
             </p>
             <div className={styles.modalActions}>
               <button
@@ -467,7 +468,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 onClick={() => setShowExitConfirm(false)}
                 data-testid="admin-exit-cancel-button"
               >
-                Cancel
+                {STRINGS.admin.exitDialog.cancel}
               </button>
               <button
                 type="button"
@@ -475,7 +476,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({ onClose }) =
                 onClick={handleExitApp}
                 data-testid="admin-exit-confirm-button"
               >
-                Yes, Exit App
+                {STRINGS.admin.exitDialog.confirm}
               </button>
             </div>
           </div>
