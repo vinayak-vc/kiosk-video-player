@@ -289,4 +289,26 @@ describe('AdminPanelScreen (Phase 6 Admin & Diagnostics UI)', () => {
     const modal = screen.getByTestId('admin-exit-modal');
     expect(modal.textContent).toContain('Android home screen');
   });
+
+  it('runs hardware and video diagnostics and generates formatted report', async () => {
+    render(<AdminPanelScreen />);
+
+    expect(screen.queryByTestId('admin-diagnostics-report')).toBeNull();
+
+    const runDiagBtn = screen.getByTestId('admin-run-diagnostics-button');
+    await act(async () => {
+      fireEvent.click(runDiagBtn);
+    });
+
+    const report = screen.getByTestId('admin-diagnostics-report');
+    expect(report).toBeInTheDocument();
+    expect(report.textContent).toContain('DIAGNOSTICS REPORT');
+    expect(report.textContent).toContain('CODEC HARDWARE CAPABILITY');
+    expect(report.textContent).toContain('H.264');
+    expect(report.textContent).toContain('H.265/HEVC');
+    expect(bridge.logClientMessage).toHaveBeenCalledWith(
+      'INFO',
+      expect.stringContaining('Hardware & Video Diagnostics executed')
+    );
+  });
 });

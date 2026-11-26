@@ -95,6 +95,7 @@ export const STRINGS = {
       integrity: 'Library Health & Counts',
       testPlayback: 'Playback Test',
       deviceInfo: 'Device & Kiosk Config',
+      diagnostics: 'Hardware & Playback Diagnostics',
     },
 
     actions: {
@@ -105,6 +106,10 @@ export const STRINGS = {
       exitKiosk: 'Exit Kiosk',
       play: 'Play',
       stop: 'Stop',
+      runDiagnostics: 'Run Diagnostics',
+      runningDiagnostics: 'Running Diagnostics...',
+      copyReport: 'Copy Report',
+      copiedReport: 'Copied!',
     },
 
     androidFolderHint:

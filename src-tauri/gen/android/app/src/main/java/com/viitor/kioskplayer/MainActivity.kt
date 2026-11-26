@@ -47,6 +47,12 @@ class MainActivity : TauriActivity() {
     })
   }
 
+  override fun onWebViewCreate(webView: android.webkit.WebView) {
+    super.onWebViewCreate(webView)
+    // Enable seamless video autoplay with audio for kiosk touch TV
+    webView.settings.mediaPlaybackRequiresUserGesture = false
+  }
+
   override fun onWindowFocusChanged(hasFocus: Boolean) {
     super.onWindowFocusChanged(hasFocus)
     if (hasFocus) {

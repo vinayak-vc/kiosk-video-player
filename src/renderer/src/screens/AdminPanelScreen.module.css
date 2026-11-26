@@ -393,3 +393,38 @@
   justify-content: center;
   gap: 16px;
 }
+
+.diagnosticsSection {
+  margin-top: 18px;
+  border-top: 1px solid rgba(0, 240, 255, 0.15);
+  padding-top: 16px;
+}
+
+.diagnosticsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.diagnosticsTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.diagnosticsBox {
+  margin-top: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace, Consolas;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: #a5f3fc;
+  touch-action: pan-y;
+}

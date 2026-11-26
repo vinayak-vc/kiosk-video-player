@@ -41,7 +41,8 @@ On large 75-inch wall-mounted displays, users stand 0.5m to 1.5m away and tap wi
 | **Player Back Button** | 72 × 72 px (min) | 144 × 144 px | **6.2 cm × 6.2 cm (2.45")** | Broad circular button with text label; comfortable standing tap. |
 | **Play/Pause Center Indicator** | 112 × 112 px | 224 × 224 px | **9.7 cm × 9.7 cm (3.82")** | Prominent center indicator with high-contrast cyan glow. |
 | **Player Action Buttons** | 72 × 72 px | 144 × 144 px | **6.2 cm × 6.2 cm (2.45")** | Play, Pause, Mute, Seek +/-10s, Replay buttons. |
-| **Timeline Track Scrubber** | 100% width × 40 px | 100% width × 80 px | **Height 1.73 cm (17.3 mm)** | Large scrubbing area with `touch-action: none` and 22px thumb. |
+| **Custom Volume Slider** | 140 × 64 px (min) | 280 × 128 px | **12.1 cm × 5.5 cm (4.76" × 2.17")** | Full pointer-capture slider with 24px thumb; hit area >=64px tall. |
+| **Timeline Track Scrubber** | 100% width × 40 px | 100% width × 80 px | **Height 1.73 cm (17.3 mm)** | Large scrubbing area with `touch-action: none` and 22px thumb. Cancel aborts scrub. |
 | **Admin Hotspot (Top-Left)** | 120 × 120 px coordinate zone | 240 × 240 px | **10.4 cm × 10.4 cm (4.09")** | Seamless coordinate check; ignores visual occlusion, 2s hold. |
 | **Gallery Page Arrows** | 64 × 64 px | 128 × 128 px | **5.5 cm × 5.5 cm (2.17")** | Clear navigation buttons flanking the media grid. |
 
@@ -77,9 +78,9 @@ To maintain a native appliance aesthetic, all browser selection callouts, magnif
 
 ---
 
-## 6. GPU Animation Smoothness & Jank Analysis
+## 6. GPU Animation Smoothness & Target Hardware Disclaimers
 
-The app was profiled for 60 FPS rendering under 4K compositor load:
+The app architecture is designed for 60 FPS rendering under 4K compositor load:
 1. **Compositor-Only Animations**:
    - Card hover and tap animations use `transform: scale(...)` and `opacity`.
    - Crossfades use CSS opacity between Video A and Video B.
@@ -89,6 +90,11 @@ The app was profiled for 60 FPS rendering under 4K compositor load:
 3. **Filter Optimization**:
    - Box-shadows and ambient glows are pre-baked with fixed blur radii (`rgba(...)`) rather than expensive animated SVG filters or continuous backdrop-filter recalculations.
    - Stage scale uses GPU matrix transform (`transform: scale(...)`), preventing raster thrashing.
-4. **Frame Rendering Results**:
-   - Animation frame duration: ~1.2 ms – 2.8 ms per frame (well under the 16.67 ms 60 FPS budget).
-   - Zero observed jank on modern Android WebView / Chromium hardware acceleration.
+4. **Hardware Performance Source Disclaimer**:
+   - *Laboratory Benchmarks (Dev Host / Chromium Preview / Android Emulator)*: Animation frame duration observed at ~1.2 ms – 2.8 ms per frame (well under the 16.67 ms 60 FPS budget).
+   - **Target Hardware Status**: **Unverified on target commercial 75-inch TV SoC hardware.** Real SoC GPU performance, thermal throttling, and hardware decoder latency must be measured directly on the physical display using the embedded **Hardware & Video Diagnostics tool** in the Admin Panel (`AdminPanelScreen.tsx` / BT-35).
+5. **Evidence Screenshots**:
+   - `Docs/evidence/android_player_controls_75inch.png`: Control hit targets at device scale showing the 64px custom volume slider and 72px action buttons.
+   - `Docs/evidence/hero_transition_frame1_100ms.png`: Hero transition at 100 ms (thumbnail expanding, single `<video>` element verified).
+   - `Docs/evidence/hero_transition_frame2_250ms.png`: Hero transition at 250 ms.
+   - `Docs/evidence/hero_transition_frame3_400ms.png`: Hero transition at 400 ms (seamless transition complete).

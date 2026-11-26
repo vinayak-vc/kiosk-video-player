@@ -46,9 +46,12 @@ describe('PlayerControls interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
     expect(baseProps.onToggleMute).toHaveBeenCalledTimes(1);
 
-    fireEvent.change(screen.getByRole('slider', { name: 'Volume' }), {
-      target: { value: '0.4' },
-    });
+    const volumeSlider = screen.getByTestId('player-volume-slider');
+    volumeSlider.getBoundingClientRect = () =>
+      ({ left: 100, width: 200, top: 0, right: 300, bottom: 64, height: 64 } as DOMRect);
+
+    // Primary pointer drag to 40% (x=180 on 100..300)
+    fireEvent.pointerDown(volumeSlider, { clientX: 180, pointerId: 1, isPrimary: true });
     expect(baseProps.onVolumeChange).toHaveBeenCalledWith(0.4);
 
     fireEvent.click(screen.getByRole('button', { name: 'Exit fullscreen' }));
@@ -69,6 +72,32 @@ describe('PlayerControls interactions', () => {
 
     fireEvent.pointerUp(timeline, { clientX: 300, pointerId: 1 }); // 50% of 120 = 60
     expect(baseProps.onSeek).toHaveBeenLastCalledWith(60);
+  });
+
+  it('aborts timeline scrub on pointerCancel without calling onSeek', () => {
+    render(<PlayerControls {...baseProps} />);
+    const timeline = screen.getByTestId('player-timeline');
+    timeline.getBoundingClientRect = () =>
+      ({ left: 100, width: 400, top: 0, right: 500, bottom: 40, height: 40 } as DOMRect);
+
+    fireEvent.pointerDown(timeline, { clientX: 200, pointerId: 1, isPrimary: true });
+    expect(baseProps.onSeek).toHaveBeenCalledWith(30);
+    vi.clearAllMocks();
+
+    // Trigger pointerCancel — must abort scrub and NOT call onSeek
+    fireEvent.pointerCancel(timeline, { clientX: 350, pointerId: 1, isPrimary: true });
+    expect(baseProps.onSeek).not.toHaveBeenCalled();
+  });
+
+  it('ignores non-primary pointer events on custom volume slider', () => {
+    render(<PlayerControls {...baseProps} />);
+    const volumeSlider = screen.getByTestId('player-volume-slider');
+    volumeSlider.getBoundingClientRect = () =>
+      ({ left: 100, width: 200, top: 0, right: 300, bottom: 64, height: 64 } as DOMRect);
+
+    // Non-primary pointer event (palm touch / secondary touch)
+    fireEvent.pointerDown(volumeSlider, { clientX: 180, pointerId: 2, isPrimary: false });
+    expect(baseProps.onVolumeChange).not.toHaveBeenCalled();
   });
 
   it('shows center play indicator when paused even if bottom bar is hidden', () => {

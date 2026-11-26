@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
-import { LayoutGroup } from 'framer-motion';
+import { AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Stage } from '../components/Stage';
 import { bridge } from '../services/bridge';
 import { IdleTimerService } from '../services/IdleTimerService';
@@ -20,6 +20,9 @@ import { VideoPlayer } from '../components/VideoPlayer';
 import '../styles/global.css';
 
 export const App: React.FC = () => {
+  if (typeof window !== 'undefined') {
+    (window as unknown as Record<string, unknown>).__playerStore = usePlayerStore;
+  }
   const appState = useApplicationStore((s) => s.state);
   const errorReason = useApplicationStore((s) => s.errorReason);
   const storagePermissionDenied = useApplicationStore((s) => s.storagePermissionDenied);
@@ -237,6 +240,7 @@ export const App: React.FC = () => {
       case 'SCANNING_MEDIA':
         return (
           <LoadingScreen
+            key="screen-loading"
             message={
               appState === 'INITIALIZING'
                 ? 'Initializing Kiosk...'
@@ -247,6 +251,7 @@ export const App: React.FC = () => {
       case 'ERROR':
         return (
           <ErrorScreen
+            key="screen-error"
             errorReason={errorReason ?? 'Failed to access media folder'}
             mediaRoot={mediaRoot || configRoot}
             onSelectFolder={selectFolderHandler}
@@ -254,12 +259,13 @@ export const App: React.FC = () => {
           />
         );
       case 'ADMIN_PANEL':
-        return <AdminPanelScreen />;
+        return <AdminPanelScreen key="screen-admin" />;
       case 'INDIVIDUAL_PLAYER': {
         const selectedItem = items.find((item) => item.id === selectedMediaId);
         if (!selectedItem) {
           return (
             <ErrorScreen
+              key="screen-player-error"
               errorReason="Selected video is no longer available"
               mediaRoot={mediaRoot || configRoot}
               onSelectFolder={selectFolderHandler}
@@ -270,15 +276,16 @@ export const App: React.FC = () => {
             />
           );
         }
-        return <VideoPlayer item={selectedItem} />;
+        return <VideoPlayer key={`screen-player-${selectedItem.id}`} item={selectedItem} />;
       }
       case 'SLIDESHOW':
-        return <SlideshowScreen />;
+        return <SlideshowScreen key="screen-slideshow" />;
       case 'GALLERY':
       default:
         if (items.length === 0) {
           return (
             <EmptyScreen
+              key="screen-empty"
               root={mediaRoot || configRoot}
               videoCount={videoCount}
               imageCount={imageCount}
@@ -289,14 +296,18 @@ export const App: React.FC = () => {
             />
           );
         }
-        return <GalleryScreen />;
+        return <GalleryScreen key="screen-gallery" />;
     }
   };
 
   return (
     <Stage>
       <AdminHotspot />
-      <LayoutGroup>{renderScreen()}</LayoutGroup>
+      <LayoutGroup>
+        <AnimatePresence mode="popLayout" initial={false}>
+          {renderScreen()}
+        </AnimatePresence>
+      </LayoutGroup>
     </Stage>
   );
 };

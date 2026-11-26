@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, Maximize2, Minimize2, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { useAnimationPresets } from '../hooks/useAnimationPresets';
@@ -134,6 +134,73 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     onUserInteraction?.();
   };
 
+  const handleTimelinePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (e.isPrimary === false) return;
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+
+    // Abort scrub on cancel: restore current time without seeking
+    setScrubTime(null);
+    onUserInteraction?.();
+  };
+
+  const volumeTrackRef = useRef<HTMLDivElement | null>(null);
+  const isVolumeDraggingRef = useRef(false);
+
+  const computeVolumeFromPointer = useCallback((clientX: number): number => {
+    const el = volumeTrackRef.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return 0;
+    const ratio = (clientX - rect.left) / rect.width;
+    return Math.max(0, Math.min(1, Math.round(ratio * 20) / 20));
+  }, []);
+
+  const handleVolumePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (e.isPrimary === false) return;
+    isVolumeDraggingRef.current = true;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    onUserInteraction?.();
+    const next = computeVolumeFromPointer(e.clientX);
+    onVolumeChange(next);
+  };
+
+  const handleVolumePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (e.isPrimary === false) return;
+    if (!isVolumeDraggingRef.current) return;
+    const next = computeVolumeFromPointer(e.clientX);
+    onVolumeChange(next);
+    onUserInteraction?.();
+  };
+
+  const handleVolumePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (e.isPrimary === false) return;
+    if (!isVolumeDraggingRef.current) return;
+    isVolumeDraggingRef.current = false;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    const next = computeVolumeFromPointer(e.clientX);
+    onVolumeChange(next);
+    onUserInteraction?.();
+  };
+
+  const handleVolumePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (e.isPrimary === false) return;
+    isVolumeDraggingRef.current = false;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    onUserInteraction?.();
+  };
+
   const displayedTime = scrubTime ?? currentTime;
   const progressPct =
     isDurationKnown && duration > 0
@@ -186,6 +253,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   type="button"
                   className={styles.backButton}
                   aria-label={STRINGS.player.backToGalleryLabel}
+                  data-testid="player-back-button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onBack();
@@ -219,7 +287,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                   onPointerDown={handleTimelinePointerDown}
                   onPointerMove={handleTimelinePointerMove}
                   onPointerUp={handleTimelinePointerUp}
-                  onPointerCancel={handleTimelinePointerUp}
+                  onPointerCancel={handleTimelinePointerCancel}
                 >
                   <div className={styles.timelineRail}>
                     <div
@@ -272,21 +340,41 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         {isMuted || volume === 0 ? <VolumeX size={28} /> : <Volume2 size={28} />}
                       </button>
 
-                      <input
-                        type="range"
+                      <div
+                        ref={volumeTrackRef}
+                        role="slider"
                         aria-label={STRINGS.player.volume}
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        value={isMuted ? 0 : volume}
-                        className={styles.volumeSlider}
-                        onPointerDown={stopSurfacePropagation}
-                        onPointerUp={stopSurfacePropagation}
-                        onChange={(e) => {
-                          onUserInteraction?.();
-                          onVolumeChange(parseFloat(e.target.value));
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round((isMuted ? 0 : volume) * 100)}
+                        className={styles.customVolumeSlider}
+                        data-testid="player-volume-slider"
+                        onPointerDown={handleVolumePointerDown}
+                        onPointerMove={handleVolumePointerMove}
+                        onPointerUp={handleVolumePointerUp}
+                        onPointerCancel={handleVolumePointerCancel}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            onVolumeChange(Math.min(1, Math.round((volume + 0.05) * 100) / 100));
+                          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            onVolumeChange(Math.max(0, Math.round((volume - 0.05) * 100) / 100));
+                          }
                         }}
-                      />
+                      >
+                        <div className={styles.volumeRail}>
+                          <div
+                            className={styles.volumeFill}
+                            style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+                          />
+                          <div
+                            className={styles.volumeThumb}
+                            style={{ left: `${(isMuted ? 0 : volume) * 100}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {bridge.platform !== 'android' && (
