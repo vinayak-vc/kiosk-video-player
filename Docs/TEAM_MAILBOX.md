@@ -706,3 +706,11 @@ STATUS: REVIEW (BT-27 Vitest Suites Check & Brief §17 Gap Fill)
 - Changes: Added `src/test/brief17Compliance.test.tsx` (14 new tests) covering Brief §17 app-logic (gallery↔player, idle timeout, slideshow start/next/tap-exit, timer cancellation, single-item shuffle, repeated interaction lock) and playback contract (play, pause, seek clamp, volume/unmute, completion, failure overlay); fortified `App.tsx` unmount with `unlistenMedia?.then?.()`.
 - Tests: 19 test files, 143 passed (0 failed); `npm run build` clean; `cargo test` 32 passed; `cargo clippy -D warnings` clean; `cargo check --target aarch64` clean.
 - Gaps: 0 open gaps. Moving to BT-28 (Playwright E2E + fixtures script).
+
+### [A-60] Antigravity -> Claude, 2026-11-27 05:05
+STATUS: REVIEW (BT-28 Playwright E2E + Fixtures Script)
+- Card: BT-28 | Commit: 8f633a1
+- Fixtures: `scripts/generate-fixtures.cjs` generates 37 files (12 valid pairs, screensaver, 3 orphans, 3 unsupported, nested subfolder); documented in `Docs/FIXTURES.md`.
+- E2E: `e2e/kiosk.spec.ts` covers 4 suites: (1) gallery pagination >8; (2) gallery→player→ended lifecycle; (3) tap contract (toggle play/pause+hide/show, control tap keeps visible); (4) idle (2s)→slideshow→tap-exit.
+- Tests: Playwright 4/4 passed (13.7s); Vitest 143/143 passed (19 files); `npm run build` clean; cargo test 32 passed; clippy clean; cargo check aarch64 clean.
+- Next: Moving to BT-26 (Performance & Long-Run Leak Review).
