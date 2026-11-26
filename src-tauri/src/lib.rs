@@ -1,5 +1,6 @@
 pub mod config;
 pub mod media;
+pub mod protocol;
 pub mod watcher;
 pub mod window;
 pub mod logger;
@@ -11,8 +12,9 @@ use logger::Logger;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
+    let builder = protocol::register_kiosk_media_protocol(tauri::Builder::default())
+        .plugin(tauri_plugin_dialog::init());
+    builder
         .setup(|app| {
             let app_handle = app.handle().clone();
             let logger = match Logger::new(&app_handle) {
