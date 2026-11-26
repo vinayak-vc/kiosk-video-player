@@ -1,0 +1,103 @@
+.galleryContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 56px 72px 44px 72px;
+  touch-action: pan-y;
+  overflow: hidden;
+}
+
+.ambientGlowTop {
+  position: absolute;
+  top: -220px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1200px;
+  height: 440px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 128, 255, 0.22) 0%,
+    rgba(121, 40, 202, 0.14) 45%,
+    transparent 75%
+  );
+  pointer-events: none;
+}
+
+.header {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.heading {
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.headingHighlight {
+  background: linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-blue) 55%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stageBody {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.navButton {
+  flex-shrink: 0;
+  min-width: 88px;
+  min-height: 88px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(11, 17, 44, 0.68);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navButton:hover:not(:disabled) {
+  border-color: rgba(0, 240, 255, 0.7);
+  background: rgba(22, 33, 76, 0.9);
+}
+
+.navButton:disabled {
+  opacity: 0.22;
+  cursor: default;
+}
+
+.gridViewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 600px;
+}
+
+.footer {
+  position: relative;
+  z-index: 2;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
