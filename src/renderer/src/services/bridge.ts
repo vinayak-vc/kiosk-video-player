@@ -9,7 +9,11 @@ import type { MediaItem, AppConfig } from '../types';
  */
 class TauriBridge {
   async getAppConfig(): Promise<AppConfig> {
-    return invoke<AppConfig>('get_app_config');
+    return invoke<AppConfig>('get_config');
+  }
+
+  async setMediaRoot(path: string): Promise<AppConfig> {
+    return invoke<AppConfig>('set_media_root', { path });
   }
 
   async getMediaItems(): Promise<MediaItem[]> {

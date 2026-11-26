@@ -1,5 +1,5 @@
 use tauri::{command, AppHandle, Emitter, State};
-use crate::config::AppConfig;
+use crate::config::{AppConfig, ConfigService};
 use crate::media::MediaItem;
 use crate::logger::Logger;
 
@@ -27,8 +27,27 @@ pub fn validate_client_log(level: &str, message: &str) -> Result<(&'static str, 
 }
 
 #[command]
-pub fn get_app_config() -> Result<AppConfig, String> {
-    Ok(AppConfig::default())
+pub fn get_config(config_service: State<'_, ConfigService>) -> Result<AppConfig, String> {
+    config_service.get_config()
+}
+
+#[command]
+pub fn set_media_root(
+    path: String,
+    config_service: State<'_, ConfigService>,
+    logger: State<'_, Logger>,
+) -> Result<AppConfig, String> {
+    logger.info(&format!("set_media_root invoked with path='{}'", path.trim()));
+    match config_service.set_media_root(&path) {
+        Ok(cfg) => {
+            logger.info(&format!("Media root updated and persisted: '{}'", cfg.kiosk_media_root));
+            Ok(cfg)
+        }
+        Err(err) => {
+            logger.warn(&format!("set_media_root rejected: {}", err));
+            Err(err)
+        }
+    }
 }
 
 #[command]

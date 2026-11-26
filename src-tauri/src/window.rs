@@ -1,4 +1,3 @@
-use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager};
 use crate::logger::Logger;
 
@@ -24,8 +23,7 @@ pub fn setup_kiosk_window(app_handle: &AppHandle) -> Result<(), String> {
         use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings3;
         use windows_core::Interface;
 
-        let webview_err: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-        let webview_err_clone = Arc::clone(&webview_err);
+        let app_handle_clone = app_handle.clone();
 
         window
             .with_webview(move |webview| {
@@ -58,22 +56,15 @@ pub fn setup_kiosk_window(app_handle: &AppHandle) -> Result<(), String> {
                     Ok(())
                 })();
 
-                if let Err(err) = res
-                    && let Ok(mut guard) = webview_err_clone.lock()
-                {
-                    *guard = Some(err);
+                if let Err(err) = res {
+                    if let Some(logger) = app_handle_clone.try_state::<Logger>() {
+                        logger.error(&format!("WebView2 kiosk settings failed: {}", err));
+                    } else {
+                        eprintln!("[ERROR] WebView2 kiosk settings failed: {}", err);
+                    }
                 }
             })
             .map_err(|e| format!("with_webview failed: {}", e))?;
-
-        if let Ok(mut guard) = webview_err.lock()
-            && let Some(err) = guard.take()
-        {
-            if let Some(logger) = app_handle.try_state::<Logger>() {
-                logger.error(&format!("WebView2 kiosk settings failed: {}", err));
-            }
-            return Err(err);
-        }
     }
 
     Ok(())
