@@ -9,6 +9,7 @@ pub mod commands;
 use tauri::Manager;
 use config::ConfigService;
 use logger::Logger;
+use watcher::MediaWatcher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -25,17 +26,32 @@ pub fn run() {
                 }
             };
 
-            match ConfigService::init(&app_handle, &logger) {
+            let initial_media_root = match ConfigService::init(&app_handle, &logger) {
                 Ok(cfg_service) => {
+                    let root = cfg_service
+                        .get_config()
+                        .map(|c| std::path::PathBuf::from(c.kiosk_media_root))
+                        .unwrap_or_else(|_| std::path::PathBuf::from("C:/Kiosk/Media"));
                     app.manage(cfg_service);
+                    root
                 }
                 Err(err) => {
                     logger.error(&format!("Failed to initialize ConfigService: {}", err));
                     return Err(Box::new(std::io::Error::other(err)));
                 }
-            }
+            };
 
             app.manage(logger);
+
+            match MediaWatcher::start_tauri(app_handle.clone(), &initial_media_root) {
+                Ok(media_watcher) => {
+                    app.manage(media_watcher);
+                }
+                Err(err) => {
+                    eprintln!("[ERROR] Failed to initialize MediaWatcher: {}", err);
+                    return Err(Box::new(std::io::Error::other(err)));
+                }
+            }
 
             if let Err(err) = window::setup_kiosk_window(&app_handle) {
                 eprintln!("[ERROR] Kiosk window configuration failed: {}", err);
