@@ -24,6 +24,10 @@ class TauriBridge {
     return invoke('exit_kiosk_app');
   }
 
+  async requestAdmin(): Promise<void> {
+    return invoke('trigger_admin_shortcut');
+  }
+
   async onAdminRequested(callback: () => void): Promise<UnlistenFn> {
     return listen('open-admin-panel', () => callback());
   }
