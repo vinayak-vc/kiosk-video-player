@@ -211,33 +211,28 @@ fn check_android_all_files_access() -> Result<bool, String> {
         .map_err(|e| format!("Failed to attach JNI thread: {}", e))?;
 
     let sdk_int = android_sdk_int(&mut env)?;
-    if sdk_int >= 30 {
-        let env_cls = env
-            .find_class("android/os/Environment")
-            .map_err(|e| format!("find_class Environment failed: {}", e))?;
-        let granted = env
-            .call_static_method(env_cls, "isExternalStorageManager", "()Z", &[])
-            .map_err(|e| format!("isExternalStorageManager() failed: {}", e))?
-            .z()
-            .map_err(|e| format!("isExternalStorageManager() not bool: {}", e))?;
-        Ok(granted)
-    } else {
-        let app_ctx = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
-        let perm = env
-            .new_string("android.permission.READ_EXTERNAL_STORAGE")
-            .map_err(|e| format!("new_string failed: {}", e))?;
-        let status = env
-            .call_method(
-                &app_ctx,
-                "checkSelfPermission",
-                "(Ljava/lang/String;)I",
-                &[jni::objects::JValue::Object(&perm)],
-            )
-            .map_err(|e| format!("checkSelfPermission failed: {}", e))?
-            .i()
-            .map_err(|e| format!("checkSelfPermission not int: {}", e))?;
-        Ok(status == 0)
-    }
+    env.with_local_frame(16, |env| {
+        if sdk_int >= 30 {
+            let env_cls = env.find_class("android/os/Environment")?;
+            let granted = env
+                .call_static_method(env_cls, "isExternalStorageManager", "()Z", &[])?
+                .z()?;
+            Ok(granted)
+        } else {
+            let app_ctx = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
+            let perm = env.new_string("android.permission.READ_EXTERNAL_STORAGE")?;
+            let status = env
+                .call_method(
+                    &app_ctx,
+                    "checkSelfPermission",
+                    "(Ljava/lang/String;)I",
+                    &[jni::objects::JValue::Object(&perm)],
+                )?
+                .i()?;
+            Ok(status == 0)
+        }
+    })
+    .map_err(|e: jni::errors::Error| format!("check_android_all_files_access failed: {}", e))
 }
 
 #[cfg(target_os = "android")]
@@ -251,104 +246,83 @@ fn open_android_all_files_settings() -> Result<(), String> {
     let app_ctx = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
 
     let sdk_int = android_sdk_int(&mut env)?;
-    let pkg_obj = env
-        .call_method(&app_ctx, "getPackageName", "()Ljava/lang/String;", &[])
-        .map_err(|e| format!("getPackageName failed: {}", e))?
-        .l()
-        .map_err(|e| format!("getPackageName not object: {}", e))?;
-    let pkg_jstr = jni::objects::JString::from(pkg_obj);
-    let pkg_name: String = env
-        .get_string(&pkg_jstr)
-        .map_err(|e| format!("get_string failed: {}", e))?
-        .into();
+    env.with_local_frame(32, |env| {
+        let pkg_obj = env
+            .call_method(&app_ctx, "getPackageName", "()Ljava/lang/String;", &[])?
+            .l()?;
+        let pkg_jstr = jni::objects::JString::from(pkg_obj);
+        let pkg_name: String = env.get_string(&pkg_jstr)?.into();
 
-    let uri_str = env
-        .new_string(format!("package:{}", pkg_name))
-        .map_err(|e| format!("new_string uri failed: {}", e))?;
-    let uri_cls = env
-        .find_class("android/net/Uri")
-        .map_err(|e| format!("find_class Uri failed: {}", e))?;
-    let uri_obj = env
-        .call_static_method(
-            uri_cls,
-            "parse",
-            "(Ljava/lang/String;)Landroid/net/Uri;",
-            &[jni::objects::JValue::Object(&uri_str)],
-        )
-        .map_err(|e| format!("Uri.parse failed: {}", e))?
-        .l()
-        .map_err(|e| format!("Uri.parse not object: {}", e))?;
+        let uri_str = env.new_string(format!("package:{}", pkg_name))?;
+        let uri_cls = env.find_class("android/net/Uri")?;
+        let uri_obj = env
+            .call_static_method(
+                uri_cls,
+                "parse",
+                "(Ljava/lang/String;)Landroid/net/Uri;",
+                &[jni::objects::JValue::Object(&uri_str)],
+            )?
+            .l()?;
 
-    let action = if sdk_int >= 30 {
-        "android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION"
-    } else {
-        "android.settings.APPLICATION_DETAILS_SETTINGS"
-    };
-    let action_str = env
-        .new_string(action)
-        .map_err(|e| format!("new_string action failed: {}", e))?;
-    let intent_cls = env
-        .find_class("android/content/Intent")
-        .map_err(|e| format!("find_class Intent failed: {}", e))?;
-    let intent = env
-        .new_object(
+        let action = if sdk_int >= 30 {
+            "android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION"
+        } else {
+            "android.settings.APPLICATION_DETAILS_SETTINGS"
+        };
+        let action_str = env.new_string(action)?;
+        let intent_cls = env.find_class("android/content/Intent")?;
+        let intent = env.new_object(
             &intent_cls,
             "(Ljava/lang/String;Landroid/net/Uri;)V",
             &[
                 jni::objects::JValue::Object(&action_str),
                 jni::objects::JValue::Object(&uri_obj),
             ],
-        )
-        .map_err(|e| format!("new Intent failed: {}", e))?;
+        )?;
 
-    // FLAG_ACTIVITY_NEW_TASK = 0x10000000 (required when starting from Application context)
-    let _ = env
-        .call_method(
+        // FLAG_ACTIVITY_NEW_TASK = 0x10000000 (required when starting from Application context)
+        let _ = env.call_method(
             &intent,
             "addFlags",
             "(I)Landroid/content/Intent;",
             &[jni::objects::JValue::Int(0x10000000)],
-        )
-        .map_err(|e| format!("Intent.addFlags failed: {}", e))?;
+        )?;
 
-    if env
-        .call_method(
+        let start_res = env.call_method(
             &app_ctx,
             "startActivity",
             "(Landroid/content/Intent;)V",
             &[jni::objects::JValue::Object(&intent)],
-        )
-        .is_err()
-    {
-        let _ = env.exception_clear();
-        if sdk_int >= 30 {
-            let fallback_action = env
-                .new_string("android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION")
-                .map_err(|e| format!("new_string fallback failed: {}", e))?;
-            let fallback_intent = env
-                .new_object(
+        );
+
+        if start_res.is_err() {
+            let _ = env.exception_clear();
+            if sdk_int >= 30 {
+                let fallback_action =
+                    env.new_string("android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION")?;
+                let fallback_intent = env.new_object(
                     &intent_cls,
                     "(Ljava/lang/String;)V",
                     &[jni::objects::JValue::Object(&fallback_action)],
-                )
-                .map_err(|e| format!("new fallback Intent failed: {}", e))?;
-            let _ = env.call_method(
-                &fallback_intent,
-                "addFlags",
-                "(I)Landroid/content/Intent;",
-                &[jni::objects::JValue::Int(0x10000000)],
-            );
-            env.call_method(
-                &app_ctx,
-                "startActivity",
-                "(Landroid/content/Intent;)V",
-                &[jni::objects::JValue::Object(&fallback_intent)],
-            )
-            .map_err(|e| format!("fallback startActivity failed: {}", e))?;
+                )?;
+                let _ = env.call_method(
+                    &fallback_intent,
+                    "addFlags",
+                    "(I)Landroid/content/Intent;",
+                    &[jni::objects::JValue::Int(0x10000000)],
+                );
+                env.call_method(
+                    &app_ctx,
+                    "startActivity",
+                    "(Landroid/content/Intent;)V",
+                    &[jni::objects::JValue::Object(&fallback_intent)],
+                )?;
+            }
         }
-    }
 
-    Ok(())
+        Ok(())
+    })
+    .map_err(|e: jni::errors::Error| format!("open_android_all_files_settings failed: {}", e))
 }
 
 #[command]
