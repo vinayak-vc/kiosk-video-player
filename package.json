@@ -12,7 +12,10 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "package": "tauri build",
-    "dist": "tauri build"
+    "dist": "tauri build",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build --debug",
+    "android:install": "adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

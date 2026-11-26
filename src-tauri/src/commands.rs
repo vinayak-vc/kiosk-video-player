@@ -1,5 +1,8 @@
 use std::path::Path;
-use tauri::{command, AppHandle, Emitter, Manager, State};
+#[cfg(not(target_os = "android"))]
+use tauri::Manager;
+use tauri::{command, AppHandle, Emitter, State};
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_dialog::DialogExt;
 use crate::config::{
     validate_media_folder_structured, AppConfig, ConfigService, FolderValidationError,
@@ -72,43 +75,55 @@ pub async fn set_media_root(
 
 #[command]
 pub async fn pick_media_folder(
-    app_handle: AppHandle,
+    #[allow(unused_variables)] app_handle: AppHandle,
     logger: State<'_, Logger>,
 ) -> Result<Option<String>, FolderValidationError> {
-    logger.info("pick_media_folder invoked: opening native folder picker");
-    let dialog_handle = app_handle.clone();
+    #[cfg(target_os = "android")]
+    {
+        logger.info("pick_media_folder invoked on Android (not supported; use manual path input)");
+        Err(FolderValidationError {
+            code: "UNSUPPORTED_ON_ANDROID".to_string(),
+            message: "Native folder picker is not available on Android.".to_string(),
+        })
+    }
 
-    let picked = tauri::async_runtime::spawn_blocking(move || {
-        dialog_handle
-            .dialog()
-            .file()
-            .set_title("Select Kiosk Media Folder")
-            .blocking_pick_folder()
-    })
-    .await
-    .map_err(|e| FolderValidationError {
-        code: "DIALOG_FAILED".to_string(),
-        message: format!("Folder picker task failed: {}", e),
-    })?;
+    #[cfg(not(target_os = "android"))]
+    {
+        logger.info("pick_media_folder invoked: opening native folder picker");
+        let dialog_handle = app_handle.clone();
 
-    let Some(file_path) = picked else {
-        logger.info("pick_media_folder cancelled by user");
-        return Ok(None);
-    };
+        let picked = tauri::async_runtime::spawn_blocking(move || {
+            dialog_handle
+                .dialog()
+                .file()
+                .set_title("Select Kiosk Media Folder")
+                .blocking_pick_folder()
+        })
+        .await
+        .map_err(|e| FolderValidationError {
+            code: "DIALOG_FAILED".to_string(),
+            message: format!("Folder picker task failed: {}", e),
+        })?;
 
-    let path_buf = file_path.into_path().map_err(|e| FolderValidationError {
-        code: "INVALID_PATH".to_string(),
-        message: format!("Selected folder path could not be resolved: {}", e),
-    })?;
+        let Some(file_path) = picked else {
+            logger.info("pick_media_folder cancelled by user");
+            return Ok(None);
+        };
 
-    let path_str = path_buf.to_string_lossy().to_string();
-    validate_media_folder_structured(&path_str).map_err(|err| {
-        logger.warn(&format!("pick_media_folder validation failed: {}", err));
-        err
-    })?;
+        let path_buf = file_path.into_path().map_err(|e| FolderValidationError {
+            code: "INVALID_PATH".to_string(),
+            message: format!("Selected folder path could not be resolved: {}", e),
+        })?;
 
-    logger.info(&format!("pick_media_folder selected valid folder: '{}'", path_str));
-    Ok(Some(path_str))
+        let path_str = path_buf.to_string_lossy().to_string();
+        validate_media_folder_structured(&path_str).map_err(|err| {
+            logger.warn(&format!("pick_media_folder validation failed: {}", err));
+            err
+        })?;
+
+        logger.info(&format!("pick_media_folder selected valid folder: '{}'", path_str));
+        Ok(Some(path_str))
+    }
 }
 
 #[command]
@@ -172,19 +187,31 @@ pub fn trigger_admin_shortcut(app_handle: AppHandle, logger: State<'_, Logger>) 
 }
 
 #[command]
-pub fn toggle_fullscreen(app_handle: AppHandle, logger: State<'_, Logger>) -> Result<bool, String> {
-    let window = app_handle
-        .get_webview_window("main")
-        .ok_or_else(|| "Main webview window not found".to_string())?;
-    let current = window
-        .is_fullscreen()
-        .map_err(|e| format!("Failed to read fullscreen state: {}", e))?;
-    let next = !current;
-    window
-        .set_fullscreen(next)
-        .map_err(|e| format!("Failed to set fullscreen({}): {}", next, e))?;
-    logger.info(&format!("toggle_fullscreen -> {}", next));
-    Ok(next)
+pub fn toggle_fullscreen(
+    #[allow(unused_variables)] app_handle: AppHandle,
+    logger: State<'_, Logger>,
+) -> Result<bool, String> {
+    #[cfg(target_os = "android")]
+    {
+        logger.info("toggle_fullscreen -> true (Android stays fullscreen)");
+        Ok(true)
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        let window = app_handle
+            .get_webview_window("main")
+            .ok_or_else(|| "Main webview window not found".to_string())?;
+        let current = window
+            .is_fullscreen()
+            .map_err(|e| format!("Failed to read fullscreen state: {}", e))?;
+        let next = !current;
+        window
+            .set_fullscreen(next)
+            .map_err(|e| format!("Failed to set fullscreen({}): {}", next, e))?;
+        logger.info(&format!("toggle_fullscreen -> {}", next));
+        Ok(next)
+    }
 }
 
 #[cfg(test)]
