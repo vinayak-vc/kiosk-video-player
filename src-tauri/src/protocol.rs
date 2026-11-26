@@ -8,9 +8,13 @@ use crate::config::ConfigService;
 use crate::logger::Logger;
 use crate::media::media_extensions;
 
-/// Maximum slice size (4 MiB) served in a single open-ended 206 Range response
+/// Maximum slice size (4 MiB) served in a single 206 Range response
 /// so large MP4 files are streamed in chunks and never loaded wholly into memory.
 const MAX_RANGE_CHUNK_BYTES: u64 = 4 * 1024 * 1024;
+
+/// Maximum file size (32 MiB) served in full on a non-Range GET;
+/// larger files without a Range header are served as a 206 first chunk (`0..4 MiB`).
+const MAX_FULL_GET_BYTES: u64 = 32 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ByteRange {
@@ -185,7 +189,10 @@ pub fn parse_range_header(range_header: &str, total_len: u64) -> RangeParseResul
             if parsed_end < start {
                 return RangeParseResult::Unsatisfiable;
             }
-            parsed_end.min(total_len - 1)
+            // Cap ALL explicit ranges at MAX_RANGE_CHUNK_BYTES to prevent OOM on huge files
+            parsed_end
+                .min(total_len - 1)
+                .min(start + MAX_RANGE_CHUNK_BYTES - 1)
         };
 
         RangeParseResult::Valid(ByteRange { start, end })
@@ -241,7 +248,10 @@ pub fn handle_media_request(
     if let Some(range_val) = request.headers().get(header::RANGE).and_then(|v| v.to_str().ok()) {
         match parse_range_header(range_val, total_len) {
             RangeParseResult::Valid(range) => {
-                let slice_len = (range.end - range.start + 1) as usize;
+                let slice_u64 = range.end - range.start + 1;
+                let Ok(slice_len) = usize::try_from(slice_u64) else {
+                    return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Requested slice too large");
+                };
                 if let Err(e) = file.seek(SeekFrom::Start(range.start)) {
                     return error_response(StatusCode::INTERNAL_SERVER_ERROR, &format!("Seek error: {}", e));
                 }
@@ -269,9 +279,35 @@ pub fn handle_media_request(
                 .body(Vec::new())
                 .unwrap_or_else(|_| Response::new(Vec::new())),
         }
+    } else if total_len > MAX_FULL_GET_BYTES {
+        // Large file requested without Range header -> serve first chunk as 206 Partial Content
+        let end = (total_len - 1).min(MAX_RANGE_CHUNK_BYTES - 1);
+        let slice_u64 = end + 1;
+        let Ok(slice_len) = usize::try_from(slice_u64) else {
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Chunk size overflow");
+        };
+        let mut buf = vec![0u8; slice_len];
+        if let Err(e) = file.read_exact(&mut buf) {
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, &format!("Read error: {}", e));
+        }
+
+        Response::builder()
+            .status(StatusCode::PARTIAL_CONTENT)
+            .header(header::CONTENT_TYPE, content_type)
+            .header(header::ACCEPT_RANGES, "bytes")
+            .header(header::CONTENT_LENGTH, slice_len.to_string())
+            .header(
+                header::CONTENT_RANGE,
+                format!("bytes 0-{}/{}", end, total_len),
+            )
+            .body(buf)
+            .unwrap_or_else(|_| Response::new(Vec::new()))
     } else {
-        // Non-range GET (e.g. PNG/JPG thumbnails or small files)
-        let mut buf = Vec::with_capacity(total_len as usize);
+        // Non-range GET for files <= MAX_FULL_GET_BYTES (e.g. thumbnails or small clips)
+        let Ok(cap) = usize::try_from(total_len) else {
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "File size overflow");
+        };
+        let mut buf = Vec::with_capacity(cap);
         if let Err(e) = file.read_to_end(&mut buf) {
             return error_response(StatusCode::INTERNAL_SERVER_ERROR, &format!("Read error: {}", e));
         }
@@ -342,6 +378,8 @@ mod tests {
         let bad_paths = [
             "/",
             "/..%2fsecret.mp4",
+            "/%2e%2e%2fsecret.mp4",
+            "/..%5csecret.mp4",
             "/..%5Csecret.mp4",
             "/..\\secret.mp4",
             "/C:/Windows/win.ini",
@@ -350,6 +388,7 @@ mod tests {
             "/sub/nested.mp4",
             "/bad.mpg",
             "/script.exe",
+            "/clip.mp4:evil",
             "/%00valid.mp4",
         ];
 
@@ -450,5 +489,66 @@ mod tests {
         assert_eq!(resp_png.headers().get(header::CONTENT_TYPE).unwrap(), "image/png");
 
         let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_all_ranges_capped_at_4mib_and_large_non_range_get_chunked() {
+        let tmp = make_temp_dir("large_cap");
+        let chunk = MAX_RANGE_CHUNK_BYTES as usize;
+
+        // 30 MiB sparse file for Range cap tests
+        let file_30m = tmp.join("big30.mp4");
+        {
+            let f = File::create(&file_30m).unwrap();
+            f.set_len(30 * 1024 * 1024).unwrap();
+        }
+
+        for range in ["bytes=0-", "bytes=0-30000000", "bytes=-99999999"] {
+            let req = make_req(Method::GET, "http://kiosk-media.localhost/big30.mp4", Some(range));
+            let resp = handle_media_request(&tmp, &req, None);
+            assert_eq!(resp.status(), StatusCode::PARTIAL_CONTENT, "range={}", range);
+            assert_eq!(resp.body().len(), chunk, "range={}", range);
+            assert_eq!(
+                resp.headers().get(header::CONTENT_LENGTH).unwrap().to_str().unwrap(),
+                chunk.to_string()
+            );
+        }
+
+        // 33 MiB sparse file without Range header -> served as 206 first 4 MiB chunk
+        let file_33m = tmp.join("big33.mp4");
+        let len_33m: u64 = 33 * 1024 * 1024;
+        {
+            let f = File::create(&file_33m).unwrap();
+            f.set_len(len_33m).unwrap();
+        }
+
+        let req_no_range = make_req(Method::GET, "http://kiosk-media.localhost/big33.mp4", None);
+        let resp_no_range = handle_media_request(&tmp, &req_no_range, None);
+        assert_eq!(resp_no_range.status(), StatusCode::PARTIAL_CONTENT);
+        assert_eq!(resp_no_range.body().len(), chunk);
+        assert_eq!(
+            resp_no_range.headers().get(header::CONTENT_RANGE).unwrap(),
+            &format!("bytes 0-{}/{}", chunk - 1, len_33m)
+        );
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    #[ignore = "Requires Windows SeCreateSymbolicLinkPrivilege / Developer Mode"]
+    fn test_symlink_escape_rejected() {
+        let tmp = make_temp_dir("symlink");
+        let outside = make_temp_dir("outside");
+        let secret = outside.join("secret.mp4");
+        fs::write(&secret, b"secret").unwrap();
+
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(&secret, tmp.join("escape.mp4")).unwrap();
+
+        let res = resolve_jailed_media_path(&tmp, "/escape.mp4");
+        assert!(res.is_err());
+
+        let _ = fs::remove_dir_all(&tmp);
+        let _ = fs::remove_dir_all(&outside);
     }
 }
