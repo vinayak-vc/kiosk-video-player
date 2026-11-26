@@ -249,30 +249,30 @@ describe('executeStartup and handleMediaChangedEvent', () => {
   });
 
   it('handleMediaChangedEvent refreshes in place without resetting page and clamps when shrinking', async () => {
-    const scan20: ScanResult = {
-      items: makeItems(20),
+    const scan28: ScanResult = {
+      items: makeItems(28),
       ignored_orphan_count: 0,
-      video_count: 20,
-      image_count: 20,
+      video_count: 28,
+      image_count: 28,
       errors: [],
       root: 'C:/Media',
     };
-    vi.mocked(bridge.getMediaItems).mockResolvedValueOnce(scan20);
-    await useMediaStore.getState().refresh(8);
+    vi.mocked(bridge.getMediaItems).mockResolvedValueOnce(scan28);
+    await useMediaStore.getState().refresh(12);
 
-    useMediaStore.getState().setPage(2, 8);
+    useMediaStore.getState().setPage(2, 12);
     expect(useMediaStore.getState().currentPage).toBe(2);
 
     vi.mocked(bridge.getMediaItems).mockResolvedValueOnce({
-      ...scan20,
-      items: makeItems(18),
+      ...scan28,
+      items: makeItems(26),
     });
     await handleMediaChangedEvent();
     expect(useMediaStore.getState().currentPage).toBe(2);
 
     vi.mocked(bridge.getMediaItems).mockResolvedValueOnce({
-      ...scan20,
-      items: makeItems(9),
+      ...scan28,
+      items: makeItems(14),
     });
     await handleMediaChangedEvent();
     expect(useMediaStore.getState().currentPage).toBe(1);

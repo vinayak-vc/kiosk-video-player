@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GalleryScreen, slicePageItems } from '../renderer/src/screens/GalleryScreen';
-import { computeGridLayout } from '../renderer/src/components/MediaGrid';
+import {
+  computeGridLayout,
+  DEFAULT_GRID_STAGE_SIZE,
+  MIN_CARD_HEIGHT_PX,
+  MIN_CARD_WIDTH_PX,
+} from '../renderer/src/components/MediaGrid';
 import { useApplicationStore } from '../renderer/src/stores/applicationStore';
 import { useMediaStore, computeTotalPages } from '../renderer/src/stores/mediaStore';
 import { usePlayerStore } from '../renderer/src/stores/playerStore';
@@ -33,15 +38,27 @@ describe('Gallery pagination & grid math', () => {
     expect(slicePageItems(items, 2, 8)).toHaveLength(4);
   });
 
-  it('computes centered grid layout (rows & columns) for n=1..8', () => {
-    expect(computeGridLayout(1)).toEqual({ rows: 1, columns: 1 });
-    expect(computeGridLayout(2)).toEqual({ rows: 1, columns: 2 });
-    expect(computeGridLayout(3)).toEqual({ rows: 1, columns: 3 });
-    expect(computeGridLayout(4)).toEqual({ rows: 1, columns: 4 });
-    expect(computeGridLayout(5)).toEqual({ rows: 2, columns: 3 });
-    expect(computeGridLayout(6)).toEqual({ rows: 2, columns: 3 });
-    expect(computeGridLayout(7)).toEqual({ rows: 2, columns: 4 });
-    expect(computeGridLayout(8)).toEqual({ rows: 2, columns: 4 });
+  it('computes centered grid layout (rows & columns) for n=1..24 with no overflow/overlap', () => {
+    expect(computeGridLayout(1)).toMatchObject({ rows: 1, columns: 1 });
+    expect(computeGridLayout(2)).toMatchObject({ rows: 1, columns: 2 });
+    expect(computeGridLayout(3)).toMatchObject({ rows: 1, columns: 3 });
+    expect(computeGridLayout(4)).toMatchObject({ rows: 2, columns: 2 });
+    expect(computeGridLayout(6)).toMatchObject({ rows: 2, columns: 3 });
+    expect(computeGridLayout(8)).toMatchObject({ rows: 2, columns: 4 });
+    expect(computeGridLayout(10)).toMatchObject({ rows: 2, columns: 5 });
+    expect(computeGridLayout(12)).toMatchObject({ rows: 3, columns: 4 });
+    expect(computeGridLayout(15)).toMatchObject({ rows: 3, columns: 5 });
+    expect(computeGridLayout(18)).toMatchObject({ rows: 3, columns: 6 });
+    expect(computeGridLayout(20)).toMatchObject({ rows: 4, columns: 5 });
+    expect(computeGridLayout(24)).toMatchObject({ rows: 4, columns: 6 });
+
+    for (let n = 1; n <= 24; n++) {
+      const layout = computeGridLayout(n, DEFAULT_GRID_STAGE_SIZE);
+      expect(layout.totalWidth).toBeLessThanOrEqual(DEFAULT_GRID_STAGE_SIZE.width);
+      expect(layout.totalHeight).toBeLessThanOrEqual(DEFAULT_GRID_STAGE_SIZE.height);
+      expect(layout.cardWidth).toBeGreaterThanOrEqual(MIN_CARD_WIDTH_PX);
+      expect(layout.cardHeight).toBeGreaterThanOrEqual(MIN_CARD_HEIGHT_PX);
+    }
   });
 });
 
@@ -60,20 +77,20 @@ describe('GalleryScreen interactions', () => {
   it('navigates pages with Next/Prev buttons and PageIndicator dots', () => {
     useMediaStore.getState().setScanResult(
       {
-        items: makeItems(20),
+        items: makeItems(28),
         ignored_orphan_count: 0,
-        video_count: 20,
-        image_count: 20,
+        video_count: 28,
+        image_count: 28,
         errors: [],
         root: 'C:/Media',
       },
-      8
+      12
     );
 
     render(<GalleryScreen />);
 
     expect(screen.getByText('Video 1')).toBeInTheDocument();
-    expect(screen.queryByText('Video 9')).not.toBeInTheDocument();
+    expect(screen.queryByText('Video 13')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
     expect(useMediaStore.getState().currentPage).toBe(1);
@@ -82,6 +99,25 @@ describe('GalleryScreen interactions', () => {
     expect(useMediaStore.getState().currentPage).toBe(2);
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+    expect(useMediaStore.getState().currentPage).toBe(1);
+  });
+
+  it('clamps currentPage when cards_per_page increases at runtime', () => {
+    useMediaStore.getState().setScanResult(
+      {
+        items: makeItems(20),
+        ignored_orphan_count: 0,
+        video_count: 20,
+        image_count: 20,
+        errors: [],
+        root: 'C:/Media',
+      },
+      6
+    );
+    useMediaStore.getState().setPage(3, 6);
+    expect(useMediaStore.getState().currentPage).toBe(3);
+
+    useMediaStore.getState().setPage(3, 12);
     expect(useMediaStore.getState().currentPage).toBe(1);
   });
 
@@ -161,14 +197,14 @@ describe('GalleryScreen interactions', () => {
   it('does not trigger card selection when a click follows a horizontal swipe', () => {
     useMediaStore.getState().setScanResult(
       {
-        items: makeItems(12),
+        items: makeItems(20),
         ignored_orphan_count: 0,
-        video_count: 12,
-        image_count: 12,
+        video_count: 20,
+        image_count: 20,
         errors: [],
         root: 'C:/Media',
       },
-      8
+      12
     );
 
     render(<GalleryScreen />);

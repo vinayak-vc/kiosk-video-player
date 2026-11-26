@@ -7,7 +7,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   idle_timeout_seconds: 60,
   controls_auto_hide_seconds: 4,
   slideshow_mode: 'shuffle',
-  cards_per_page: 8,
+  cards_per_page: 12,
   sfx_enabled: true,
   return_to_gallery_on_end: true,
 };

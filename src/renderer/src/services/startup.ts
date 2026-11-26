@@ -59,7 +59,7 @@ export async function executeStartup(isMounted: () => boolean = () => true): Pro
     }
 
     useApplicationStore.getState().dispatch('INIT_DONE');
-    await performMediaScan(cfg?.cards_per_page ?? 8);
+    await performMediaScan(cfg?.cards_per_page ?? 12);
   } catch (err) {
     if (!isMounted()) return;
     const msg = err instanceof Error ? err.message : String(err);

@@ -11,10 +11,13 @@ export interface MediaCardProps {
   index: number;
   presets: KioskAnimationPresets;
   onSelect: (id: string) => void;
+  cardWidth?: number;
+  cardHeight?: number;
+  titleFontSize?: number;
 }
 
 export const MediaCard: React.FC<MediaCardProps> = React.memo(
-  ({ item, index, presets, onSelect }) => {
+  ({ item, index, presets, onSelect, cardWidth, cardHeight, titleFontSize }) => {
     const [imgError, setImgError] = useState(false);
     const hoverCapable = useHoverCapable();
 
@@ -22,7 +25,11 @@ export const MediaCard: React.FC<MediaCardProps> = React.memo(
       <motion.button
         type="button"
         className={styles.card}
-        style={presets.cardAmbientGlow}
+        style={{
+          ...presets.cardAmbientGlow,
+          ...(cardWidth ? { width: `${cardWidth}px` } : {}),
+          ...(cardHeight ? { height: `${cardHeight}px` } : {}),
+        }}
         aria-label={`Play ${item.display_title}`}
         variants={presets.cardEntrance(index)}
         initial="hidden"
@@ -50,7 +57,12 @@ export const MediaCard: React.FC<MediaCardProps> = React.memo(
         )}
 
         <div className={styles.scrim}>
-          <span className={styles.title}>{item.display_title}</span>
+          <span
+            className={styles.title}
+            style={titleFontSize ? { fontSize: `${titleFontSize}px` } : undefined}
+          >
+            {item.display_title}
+          </span>
           <span className={styles.playBadge} aria-hidden="true">
             <Play size={16} fill="currentColor" />
           </span>

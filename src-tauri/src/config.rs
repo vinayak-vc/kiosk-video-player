@@ -36,7 +36,7 @@ impl Default for AppConfig {
             idle_timeout_seconds: 60,
             controls_auto_hide_seconds: 4,
             slideshow_mode: "shuffle".to_string(),
-            cards_per_page: 8,
+            cards_per_page: 12,
             sfx_enabled: true,
             return_to_gallery_on_end: true,
         }
@@ -265,8 +265,8 @@ pub fn load_config_from_paths(
 
                 if let Some(v) = env_map.get("CARDS_PER_PAGE") {
                     match v.trim().parse::<usize>() {
-                        Ok(n) if n > 0 => cfg.cards_per_page = n,
-                        _ => warn("Invalid CARDS_PER_PAGE in .env; using default (8)"),
+                        Ok(n) if (4..=24).contains(&n) => cfg.cards_per_page = n,
+                        _ => warn("Invalid CARDS_PER_PAGE in .env (allowed 4..24); using default (12)"),
                     }
                 }
 
