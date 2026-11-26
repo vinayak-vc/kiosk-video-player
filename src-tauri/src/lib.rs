@@ -74,7 +74,8 @@ pub fn run() {
             commands::get_media_items,
             commands::log_client_message,
             commands::exit_kiosk_app,
-            commands::trigger_admin_shortcut
+            commands::trigger_admin_shortcut,
+            commands::toggle_fullscreen
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

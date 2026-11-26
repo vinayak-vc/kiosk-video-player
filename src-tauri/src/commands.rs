@@ -1,5 +1,5 @@
 use std::path::Path;
-use tauri::{command, AppHandle, Emitter, State};
+use tauri::{command, AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use crate::config::{
     validate_media_folder_structured, AppConfig, ConfigService, FolderValidationError,
@@ -169,6 +169,22 @@ pub fn trigger_admin_shortcut(app_handle: AppHandle, logger: State<'_, Logger>) 
     app_handle
         .emit("open-admin-panel", ())
         .map_err(|e| format!("Failed to emit open-admin-panel event: {}", e))
+}
+
+#[command]
+pub fn toggle_fullscreen(app_handle: AppHandle, logger: State<'_, Logger>) -> Result<bool, String> {
+    let window = app_handle
+        .get_webview_window("main")
+        .ok_or_else(|| "Main webview window not found".to_string())?;
+    let current = window
+        .is_fullscreen()
+        .map_err(|e| format!("Failed to read fullscreen state: {}", e))?;
+    let next = !current;
+    window
+        .set_fullscreen(next)
+        .map_err(|e| format!("Failed to set fullscreen({}): {}", next, e))?;
+    logger.info(&format!("toggle_fullscreen -> {}", next));
+    Ok(next)
 }
 
 #[cfg(test)]

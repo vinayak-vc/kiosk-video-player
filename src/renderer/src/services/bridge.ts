@@ -40,6 +40,10 @@ class TauriBridge {
     return invoke('trigger_admin_shortcut');
   }
 
+  async toggleFullscreen(): Promise<boolean> {
+    return invoke<boolean>('toggle_fullscreen');
+  }
+
   async onAdminRequested(callback: () => void): Promise<UnlistenFn> {
     return listen('open-admin-panel', () => callback());
   }
