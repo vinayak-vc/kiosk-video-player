@@ -85,12 +85,14 @@ export const GalleryScreen: React.FC = () => {
   );
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.isPrimary === false) return;
     void AudioService.resumeOnGesture();
     didSwipeRef.current = false;
     swipeStartRef.current = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.isPrimary === false) return;
     const start = swipeStartRef.current;
     swipeStartRef.current = null;
     if (!start || start.pointerId !== e.pointerId) return;

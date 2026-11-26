@@ -95,6 +95,7 @@ export function usePlayerInteraction({
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       if (disabled) return;
+      if (e.isPrimary === false) return;
       void AudioService.resumeOnGesture();
       pointerDownRef.current = {
         pointerId: e.pointerId,
@@ -110,7 +111,7 @@ export function usePlayerInteraction({
     (e: React.PointerEvent<HTMLElement>) => {
       const start = pointerDownRef.current;
       pointerDownRef.current = null;
-      if (disabled || !start || start.pointerId !== e.pointerId) return;
+      if (disabled || !start || start.pointerId !== e.pointerId || e.isPrimary === false) return;
 
       const now = Date.now();
       const dx = e.clientX - start.x;

@@ -177,6 +177,11 @@ describe('GalleryScreen interactions', () => {
     fireEvent.pointerDown(gallery, { clientX: 400, clientY: 300, pointerId: 1 });
     fireEvent.pointerUp(gallery, { clientX: 550, clientY: 305, pointerId: 1 });
     expect(useMediaStore.getState().currentPage).toBe(0);
+
+    // Multi-touch / palm drag with isPrimary: false must be ignored
+    fireEvent.pointerDown(gallery, { clientX: 600, clientY: 300, pointerId: 2, isPrimary: false });
+    fireEvent.pointerUp(gallery, { clientX: 450, clientY: 310, pointerId: 2, isPrimary: false });
+    expect(useMediaStore.getState().currentPage).toBe(0);
   });
 
   it('selects media on card click and transitions to INDIVIDUAL_PLAYER', () => {

@@ -34,9 +34,9 @@ const SAMPLE_ITEM: MediaItem = {
 };
 
 function tapSurface(el: HTMLElement, x = 500, y = 400, durationMs = 40) {
-  fireEvent.pointerDown(el, { clientX: x, clientY: y, pointerId: 1 });
+  fireEvent.pointerDown(el, { clientX: x, clientY: y, pointerId: 1, isPrimary: true });
   vi.advanceTimersByTime(durationMs);
-  fireEvent.pointerUp(el, { clientX: x, clientY: y, pointerId: 1 });
+  fireEvent.pointerUp(el, { clientX: x, clientY: y, pointerId: 1, isPrimary: true });
 }
 
 describe('Player Tap Contract (Brief §7) & Auto-Hide', () => {
@@ -192,5 +192,25 @@ describe('Player Tap Contract (Brief §7) & Auto-Hide', () => {
     });
     expect(usePlayerStore.getState().controlsVisible).toBe(true);
     expect(usePlayerStore.getState().isPlaying).toBe(false);
+  });
+
+  it('A7: ignores non-primary pointer events (palm rejection and multi-touch)', () => {
+    render(<VideoPlayer item={SAMPLE_ITEM} />);
+    const surface = screen.getByTestId('video-player-screen');
+
+    // Controls start hidden and playing
+    expect(usePlayerStore.getState().controlsVisible).toBe(false);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    // Non-primary pointer event (palm touch or second finger)
+    act(() => {
+      fireEvent.pointerDown(surface, { clientX: 400, clientY: 300, pointerId: 2, isPrimary: false });
+      vi.advanceTimersByTime(50);
+      fireEvent.pointerUp(surface, { clientX: 400, clientY: 300, pointerId: 2, isPrimary: false });
+    });
+
+    // Playback state and controls visibility must remain unchanged
+    expect(usePlayerStore.getState().controlsVisible).toBe(false);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 });
