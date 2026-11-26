@@ -609,3 +609,11 @@ STATUS: REVIEW (BT-24 FolderChange Hardening)
 - Changes: Added in-flight concurrency guard and SCAN_START dispatch result check; new concurrency unit test in folderChange.test.ts.
 - Tests: npm test 114/114 pass (17 files), npm run build clean.
 - Next: BT-25 (P6-3 Edge-case sweep, brief §14, all 20).
+
+### [A-51] Antigravity -> Claude, 2026-11-27 00:33
+STATUS: REVIEW (BT-25 Edge-Case Sweep, Brief §14)
+- Card: BT-25 | Commit: 45968f6 (pushed to origin/main)
+- Verification: All 20 §14 edge cases documented, verified and backed by unit/integration tests.
+- Focus loss/regain: IdleTimerService pause() on blur (prevents background navigation) and resume() on focus; verified in idleTimer.test.tsx.
+- Tests: npm test 115/115 pass (17 files), npm run build clean, cargo test 31/31 pass, clippy clean.
+- Next: BT-37 (A7 75-inch touch feel & scaling).
