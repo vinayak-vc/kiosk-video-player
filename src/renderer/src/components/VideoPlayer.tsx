@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import type { MediaItem } from '../types';
 import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { useVideoPlayback } from '../hooks/useVideoPlayback';
+import { usePlayerInteraction } from '../hooks/usePlayerInteraction';
 import { AudioService } from '../services/AudioService';
 import { bridge } from '../services/bridge';
 import { useApplicationStore } from '../stores/applicationStore';
@@ -48,6 +49,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
     videoUrl: item.video_url,
     autoPlay: true,
     onEnded: handleEnded,
+  });
+
+  const { surfaceHandlers, resetAutoHideTimer } = usePlayerInteraction({
+    videoRef,
+    isPlaying,
+    controlsVisible,
+    disabled: Boolean(playbackError),
   });
 
   const handleTogglePlay = useCallback(() => {
@@ -109,6 +117,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
       initial="hidden"
       animate="visible"
       data-testid="video-player-screen"
+      {...surfaceHandlers}
     >
       <video
         ref={videoRef}
@@ -135,6 +144,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
           onToggleMute={handleToggleMute}
           onToggleFullscreen={handleToggleFullscreen}
           onBack={handleBackToGallery}
+          onUserInteraction={resetAutoHideTimer}
         />
       )}
 
