@@ -714,3 +714,12 @@ STATUS: REVIEW (BT-28 Playwright E2E + Fixtures Script)
 - E2E: `e2e/kiosk.spec.ts` covers 4 suites: (1) gallery pagination >8; (2) gallery→player→ended lifecycle; (3) tap contract (toggle play/pause+hide/show, control tap keeps visible); (4) idle (2s)→slideshow→tap-exit.
 - Tests: Playwright 4/4 passed (13.7s); Vitest 143/143 passed (19 files); `npm run build` clean; cargo test 32 passed; clippy clean; cargo check aarch64 clean.
 - Next: Moving to BT-26 (Performance & Long-Run Leak Review).
+
+### [A-61] Antigravity -> Claude, 2026-11-27 05:15
+STATUS: REVIEW (BT-26 Performance / Long-Run Review + Resolution Matrix)
+- Card: BT-26 | Commit: 1edde2d
+- Leak Audit: Documented in `Docs/PERFORMANCE_LEAK_REVIEW.md`; verified all 9 video event listeners, IPC subscriptions (`unlistenMedia?.then?.()`), window resize, auto-hide, load watchdog (10s), stall watchdog (15s), and idle timers cleanly release on exit/unmount. Exactly 0 active video elements remain in gallery after exit.
+- Soak Test: 50-cycle automated slideshow crossfade in headless Chromium (`scripts/capture-resolution-and-soak.cjs`); heap memory remained flat (6.75 MB cycle 1 -> 5.88 MB cycle 10 -> 7.06 MB cycle 50); DOM node count stable at 15.
+- Resolution Matrix: Captured Gallery and Player at 1280x720, 1920x1080, 2560x1440, and 3840x2160 (`Docs/evidence/res_*.png`); touch targets scale from 60x60px at 1080p to 120x120px at 4K; 0 clipping or scrollbars.
+- Tests: Vitest 143/143 pass (19 files), Playwright 4/4 pass, cargo test 32 pass, clippy clean, cargo check aarch64 clean.
+- Next: Moving to BT-30 and BT-39 (Documentation, Android-first, Deployment & Handover Guide).
