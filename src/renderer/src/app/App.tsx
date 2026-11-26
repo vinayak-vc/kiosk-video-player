@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
+import { LayoutGroup } from 'framer-motion';
 import { Stage } from '../components/Stage';
 import { bridge } from '../services/bridge';
 import { executeStartup, handleMediaChangedEvent, performMediaScan } from '../services/startup';
@@ -187,7 +188,11 @@ export const App: React.FC = () => {
     }
   };
 
-  return <Stage>{renderScreen()}</Stage>;
+  return (
+    <Stage>
+      <LayoutGroup>{renderScreen()}</LayoutGroup>
+    </Stage>
+  );
 };
 
 export default App;

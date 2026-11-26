@@ -77,7 +77,7 @@ export const GalleryScreen: React.FC = () => {
       }
       if (isTransitionLocked) return;
 
-      const accepted = dispatch('SELECT_MEDIA', { lockDurationMs: 400 });
+      const accepted = dispatch('SELECT_MEDIA', { lockDurationMs: 500 });
       if (!accepted) return;
 
       AudioService.play('select');

@@ -32,7 +32,9 @@ export const MediaCard: React.FC<MediaCardProps> = React.memo(
         onClick={() => onSelect(item.id)}
       >
         {!imgError ? (
-          <img
+          <motion.img
+            layoutId={`media-thumb-${item.id}`}
+            transition={presets.transitions.layout}
             src={item.thumbnail_url}
             alt={item.display_title}
             loading="lazy"

@@ -6,9 +6,11 @@ import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { useVideoPlayback } from '../hooks/useVideoPlayback';
 import { usePlayerInteraction } from '../hooks/usePlayerInteraction';
 import { AudioService } from '../services/AudioService';
+import { IdleTimerService } from '../services/IdleTimerService';
 import { bridge } from '../services/bridge';
 import { useApplicationStore } from '../stores/applicationStore';
 import { usePlayerStore } from '../stores/playerStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { PlayerControls } from './PlayerControls';
 import styles from './VideoPlayer.module.css';
 
@@ -39,12 +41,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
   }, [onExit]);
 
   const handleEnded = useCallback(() => {
-    AudioService.play('return');
-    usePlayerStore.getState().clearSelection();
-    useApplicationStore.getState().dispatch('VIDEO_ENDED', { lockDurationMs: 400 });
+    const returnOnEnd = useSettingsStore.getState().config.return_to_gallery_on_end;
+    if (returnOnEnd) {
+      AudioService.play('return');
+      usePlayerStore.getState().clearSelection();
+      useApplicationStore.getState().dispatch('VIDEO_ENDED', { lockDurationMs: 450 });
+      IdleTimerService.reset();
+    } else {
+      usePlayerStore.getState().setPlaying(false);
+      usePlayerStore.getState().setControlsVisible(true);
+    }
   }, []);
 
-  const { videoRef, isDurationKnown, playbackError } = useVideoPlayback({
+  const { videoRef, isReady, isDurationKnown, playbackError } = useVideoPlayback({
     mediaId: item.id,
     videoUrl: item.video_url,
     autoPlay: true,
@@ -126,6 +135,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
         playsInline
         data-testid="kiosk-video-element"
       />
+
+      {!playbackError && (
+        <motion.img
+          layoutId={`media-thumb-${item.id}`}
+          src={item.thumbnail_url}
+          alt={item.display_title}
+          className={styles.posterLayer}
+          animate={{ opacity: isReady ? 0 : 1 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        />
+      )}
 
       {!playbackError && (
         <PlayerControls

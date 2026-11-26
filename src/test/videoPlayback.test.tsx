@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { VideoPlayer } from '../renderer/src/components/VideoPlayer';
 import { LOAD_WATCHDOG_MS } from '../renderer/src/hooks/useVideoPlayback';
+import { IdleTimerService } from '../renderer/src/services/IdleTimerService';
 import { useApplicationStore } from '../renderer/src/stores/applicationStore';
 import { usePlayerStore } from '../renderer/src/stores/playerStore';
+import { useSettingsStore } from '../renderer/src/stores/settingsStore';
 import { bridge } from '../renderer/src/services/bridge';
 import type { MediaItem } from '../renderer/src/types';
 
@@ -151,5 +153,31 @@ describe('VideoPlayer & useVideoPlayback lifecycle', () => {
       'ERROR',
       expect.stringContaining('Load watchdog timeout')
     );
+  });
+
+  it('returns to GALLERY and resets IdleTimerService on ended when return_to_gallery_on_end is true', () => {
+    const resetSpy = vi.spyOn(IdleTimerService, 'reset');
+    useSettingsStore.getState().reset();
+    render(<VideoPlayer item={SAMPLE_ITEM} />);
+    const video = screen.getByTestId('kiosk-video-element');
+
+    fireEvent(video, new Event('ended'));
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+    expect(usePlayerStore.getState().selectedMediaId).toBeNull();
+    expect(resetSpy).toHaveBeenCalledTimes(1);
+    resetSpy.mockRestore();
+  });
+
+  it('stays on last frame with controls visible on ended when return_to_gallery_on_end is false', () => {
+    useSettingsStore.setState((s) => ({
+      config: { ...s.config, return_to_gallery_on_end: false },
+    }));
+    render(<VideoPlayer item={SAMPLE_ITEM} />);
+    const video = screen.getByTestId('kiosk-video-element');
+
+    fireEvent(video, new Event('ended'));
+    expect(useApplicationStore.getState().state).toBe('INDIVIDUAL_PLAYER');
+    expect(usePlayerStore.getState().isPlaying).toBe(false);
+    expect(usePlayerStore.getState().controlsVisible).toBe(true);
   });
 });
