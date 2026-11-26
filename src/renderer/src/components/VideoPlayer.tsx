@@ -31,14 +31,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
   const isMuted = usePlayerStore((s) => s.isMuted);
 
   const handleBackToGallery = useCallback(() => {
+    if (onExit) {
+      AudioService.play('return');
+      usePlayerStore.getState().clearSelection();
+      onExit();
+      return;
+    }
+    // Dispatch first; only clearSelection if dispatch succeeded (not locked)
+    const accepted = useApplicationStore.getState().dispatch('PLAYER_EXIT', { lockDurationMs: 400 });
+    if (!accepted) return;
     AudioService.play('return');
     usePlayerStore.getState().clearSelection();
-    if (onExit) {
-      onExit();
-    } else {
-      useApplicationStore.getState().dispatch('PLAYER_EXIT', { lockDurationMs: 400 });
-    }
   }, [onExit]);
+
+  const handleErrorBackToGallery = useCallback(() => {
+    // Error overlay Back must NEVER be blockable by transition lock
+    useApplicationStore.getState().releaseTransition();
+    handleBackToGallery();
+  }, [handleBackToGallery]);
 
   const handleEnded = useCallback(() => {
     const returnOnEnd = useSettingsStore.getState().config.return_to_gallery_on_end;
@@ -179,7 +189,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onExit }) => {
             <button
               type="button"
               className={styles.backButton}
-              onClick={handleBackToGallery}
+              onClick={handleErrorBackToGallery}
             >
               <ArrowLeft size={20} />
               Back to gallery

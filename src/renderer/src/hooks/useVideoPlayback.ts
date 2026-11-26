@@ -3,6 +3,8 @@ import { bridge } from '../services/bridge';
 import { usePlayerStore } from '../stores/playerStore';
 
 export const LOAD_WATCHDOG_MS = 10_000;
+export const STALL_WATCHDOG_MS = 15_000;
+export const STALL_CHECK_INTERVAL_MS = 3_000;
 export const TIMEUPDATE_THROTTLE_MS = 250; // ~4 updates/sec
 
 // Module-level guard ensuring at most one active <video> plays app-wide.
@@ -77,6 +79,9 @@ export function useVideoPlayback({
 
     let disposed = false;
     let lastTimeUpdateMs = 0;
+    let readyFlag = false;
+    let lastObservedTime = -1;
+    let lastProgressAtMs = Date.now();
 
     // Load watchdog: never leave visitor on an infinite black/spinner screen
     let watchdogId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
@@ -88,6 +93,35 @@ export function useVideoPlayback({
         bridge.logClientMessage('ERROR', `Load watchdog timeout for media '${mediaId}' (${videoUrl})`)
       ).catch(() => {});
     }, LOAD_WATCHDOG_MS);
+
+    // Mid-playback stall watchdog: if currentTime does not advance for 15s while playing -> error overlay
+    const stallIntervalId = setInterval(() => {
+      if (disposed || !readyFlag) return;
+      if (video.paused || video.ended) {
+        lastProgressAtMs = Date.now();
+        lastObservedTime = video.currentTime;
+        return;
+      }
+      const cur = video.currentTime;
+      if (cur !== lastObservedTime) {
+        lastObservedTime = cur;
+        lastProgressAtMs = Date.now();
+        return;
+      }
+      if (Date.now() - lastProgressAtMs >= STALL_WATCHDOG_MS) {
+        clearInterval(stallIntervalId);
+        const msg = 'Video playback stalled';
+        setIsBuffering(false);
+        setPlaybackError(msg);
+        usePlayerStore.getState().setPlaying(false);
+        void Promise.resolve(
+          bridge.logClientMessage(
+            'ERROR',
+            `Playback stall watchdog (15s) for media '${mediaId}' at currentTime=${cur.toFixed(2)}`
+          )
+        ).catch(() => {});
+      }
+    }, STALL_CHECK_INTERVAL_MS);
 
     const clearWatchdog = () => {
       if (watchdogId !== null) {
@@ -112,6 +146,9 @@ export function useVideoPlayback({
     const handleCanPlay = () => {
       if (disposed) return;
       clearWatchdog();
+      readyFlag = true;
+      lastObservedTime = video.currentTime;
+      lastProgressAtMs = Date.now();
       setIsReady(true);
       setIsBuffering(false);
       onCanPlayRef.current?.();
@@ -200,6 +237,7 @@ export function useVideoPlayback({
     return () => {
       disposed = true;
       clearWatchdog();
+      clearInterval(stallIntervalId);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('play', handlePlay);

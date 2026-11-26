@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { VideoPlayer } from '../renderer/src/components/VideoPlayer';
-import { LOAD_WATCHDOG_MS } from '../renderer/src/hooks/useVideoPlayback';
+import { LOAD_WATCHDOG_MS, STALL_WATCHDOG_MS } from '../renderer/src/hooks/useVideoPlayback';
 import { IdleTimerService } from '../renderer/src/services/IdleTimerService';
 import { useApplicationStore } from '../renderer/src/stores/applicationStore';
 import { usePlayerStore } from '../renderer/src/stores/playerStore';
@@ -179,5 +179,46 @@ describe('VideoPlayer & useVideoPlayback lifecycle', () => {
     expect(useApplicationStore.getState().state).toBe('INDIVIDUAL_PLAYER');
     expect(usePlayerStore.getState().isPlaying).toBe(false);
     expect(usePlayerStore.getState().controlsVisible).toBe(true);
+  });
+
+  it('does not clearSelection if Back is tapped during transition lock, but Error Overlay Back always exits', () => {
+    useApplicationStore.getState().beginTransition(500);
+    usePlayerStore.getState().setControlsVisible(true);
+    render(<VideoPlayer item={SAMPLE_ITEM} />);
+
+    // Normal Back during lock -> ignored, selection preserved
+    fireEvent.click(screen.getByRole('button', { name: 'Back to gallery' }));
+    expect(useApplicationStore.getState().state).toBe('INDIVIDUAL_PLAYER');
+    expect(usePlayerStore.getState().selectedMediaId).toBe(SAMPLE_ITEM.id);
+
+    // Trigger error overlay while STILL locked -> Error Overlay Back releases lock & exits
+    const video = screen.getByTestId('kiosk-video-element') as HTMLVideoElement;
+    Object.defineProperty(video, 'error', { value: { code: 4, message: 'err' }, configurable: true });
+    fireEvent(video, new Event('error'));
+    fireEvent.click(screen.getByRole('button', { name: /Back to gallery/i }));
+
+    expect(useApplicationStore.getState().state).toBe('GALLERY');
+    expect(usePlayerStore.getState().selectedMediaId).toBeNull();
+  });
+
+  it('triggers Error Overlay if currentTime stalls for 15s while playing', () => {
+    vi.useFakeTimers();
+    render(<VideoPlayer item={SAMPLE_ITEM} />);
+    const video = screen.getByTestId('kiosk-video-element') as HTMLVideoElement;
+
+    Object.defineProperty(video, 'paused', { value: false, configurable: true });
+    Object.defineProperty(video, 'ended', { value: false, configurable: true });
+    Object.defineProperty(video, 'currentTime', { value: 5.5, configurable: true });
+    fireEvent(video, new Event('canplay'));
+
+    act(() => {
+      vi.advanceTimersByTime(STALL_WATCHDOG_MS);
+    });
+
+    expect(screen.getByTestId('player-error-overlay')).toBeInTheDocument();
+    expect(bridge.logClientMessage).toHaveBeenCalledWith(
+      'ERROR',
+      expect.stringContaining('Playback stall watchdog (15s)')
+    );
   });
 });
