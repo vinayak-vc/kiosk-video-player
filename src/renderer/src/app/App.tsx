@@ -13,15 +13,15 @@ import { LoadingScreen } from '../screens/LoadingScreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
 import { EmptyScreen } from '../screens/EmptyScreen';
 import { SlideshowScreen } from '../screens/SlideshowScreen';
+import { AdminPanelScreen } from '../screens/AdminPanelScreen';
+import { AdminHotspot } from '../components/AdminHotspot';
 import { VideoPlayer } from '../components/VideoPlayer';
 import '../styles/global.css';
-import styles from './App.module.css';
 
 export const App: React.FC = () => {
   const appState = useApplicationStore((s) => s.state);
   const errorReason = useApplicationStore((s) => s.errorReason);
   const storagePermissionDenied = useApplicationStore((s) => s.storagePermissionDenied);
-  const dispatch = useApplicationStore((s) => s.dispatch);
   const items = useMediaStore((s) => s.items);
   const screensaver = useMediaStore((s) => s.screensaver);
   const selectedMediaId = usePlayerStore((s) => s.selectedMediaId);
@@ -225,15 +225,7 @@ export const App: React.FC = () => {
           />
         );
       case 'ADMIN_PANEL':
-        return (
-          <div className={styles.appContainer}>
-            <h1 className={styles.appTitle}>ADMIN PANEL (PLACEHOLDER)</h1>
-            <p className={styles.appSubtitle}>Full Admin UI arrives in Phase 6</p>
-            <button type="button" onClick={() => dispatch('ADMIN_CLOSE')}>
-              Close
-            </button>
-          </div>
-        );
+        return <AdminPanelScreen />;
       case 'INDIVIDUAL_PLAYER': {
         const selectedItem = items.find((item) => item.id === selectedMediaId);
         if (!selectedItem) {
@@ -274,6 +266,7 @@ export const App: React.FC = () => {
 
   return (
     <Stage>
+      <AdminHotspot />
       <LayoutGroup>{renderScreen()}</LayoutGroup>
     </Stage>
   );

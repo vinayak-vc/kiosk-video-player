@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom';
 
+HTMLMediaElement.prototype.play = () => Promise.resolve();
+HTMLMediaElement.prototype.pause = () => {};
+HTMLMediaElement.prototype.load = () => {};
+
 if (typeof globalThis.PointerEvent === 'undefined') {
   class MockPointerEvent extends MouseEvent {
     readonly pointerId: number;
