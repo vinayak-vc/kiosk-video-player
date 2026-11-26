@@ -178,7 +178,7 @@ export const App: React.FC = () => {
       mounted = false;
       window.removeEventListener('focus', handleResumePermissionCheck);
       document.removeEventListener('visibilitychange', handleVisibility);
-      unlistenMedia.then((fn) => fn()).catch(() => {});
+      unlistenMedia?.then?.((fn) => fn?.()).catch?.(() => {});
     };
   }, []);
 
