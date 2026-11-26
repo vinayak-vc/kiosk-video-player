@@ -3,7 +3,32 @@
 $androidDir = Join-Path $env:USERPROFILE '.android'
 $keystorePath = Join-Path $androidDir 'kiosk-release.keystore'
 $propsPath = Join-Path $androidDir 'kiosk-keystore.properties'
-$keytool = 'C:\Users\AIML\AppData\Local\jdk-17\bin\keytool.exe'
+
+# Dynamic JDK lookup chain (no hardcoded user paths)
+$keytool = $null
+$candidates = @()
+if ($env:JAVA_HOME) { $candidates += $env:JAVA_HOME }
+if ($env:LOCALAPPDATA) { $candidates += (Join-Path $env:LOCALAPPDATA 'jdk-17') }
+$candidates += @(
+    (Get-ChildItem 'C:\Program Files\Microsoft\jdk-17*' -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -ExpandProperty FullName),
+    (Get-ChildItem 'C:\Program Files\Eclipse Adoptium\jdk-17*' -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -ExpandProperty FullName),
+    (Get-ChildItem 'C:\Program Files\Java\jdk-17*' -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -ExpandProperty FullName)
+) | Where-Object { $_ }
+
+foreach ($dir in $candidates) {
+    $exe = Join-Path $dir 'bin\keytool.exe'
+    if (Test-Path $exe) {
+        $keytool = $exe
+        break
+    }
+}
+if (-not $keytool) {
+    $pathCmd = Get-Command keytool -ErrorAction SilentlyContinue
+    if ($pathCmd) { $keytool = $pathCmd.Source }
+}
+if (-not $keytool) {
+    throw 'keytool.exe not found in JAVA_HOME, %LOCALAPPDATA%\jdk-17, or Program Files.'
+}
 
 if (-not (Test-Path $keystorePath)) {
     # Generate random 32-character password
