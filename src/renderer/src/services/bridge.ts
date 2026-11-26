@@ -2,12 +2,31 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { ScanResult, AppConfig } from '../types';
 
+export type Platform = 'windows' | 'android' | 'macos' | 'linux' | 'unknown';
+
 /**
  * bridge.ts
  * The ONLY module in the entire renderer authorized to invoke Tauri commands
  * or listen for Tauri backend events.
  */
 class TauriBridge {
+  platform: Platform = 'windows';
+
+  async getPlatform(): Promise<Platform> {
+    return invoke<Platform>('get_platform');
+  }
+
+  async initPlatform(): Promise<Platform> {
+    try {
+      const detected = await this.getPlatform();
+      if (detected) {
+        this.platform = detected;
+      }
+    } catch {
+      // Fallback to default 'windows' in test/mocked environments without get_platform
+    }
+    return this.platform;
+  }
   async getAppConfig(): Promise<AppConfig> {
     return invoke<AppConfig>('get_config');
   }

@@ -172,10 +172,51 @@ pub fn log_client_message(
 }
 
 #[command]
-pub fn exit_kiosk_app(app_handle: AppHandle, logger: State<'_, Logger>) -> Result<(), String> {
-    logger.info("exit_kiosk_app invoked: terminating process");
-    app_handle.exit(0);
-    Ok(())
+pub fn exit_kiosk_app(
+    #[allow(unused_variables)] app_handle: AppHandle,
+    logger: State<'_, Logger>,
+) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        logger.info("exit_kiosk_app ignored on Android");
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        logger.info("exit_kiosk_app invoked: terminating process");
+        app_handle.exit(0);
+        Ok(())
+    }
+}
+
+#[command]
+pub fn get_platform() -> &'static str {
+    #[cfg(target_os = "android")]
+    {
+        "android"
+    }
+    #[cfg(target_os = "windows")]
+    {
+        "windows"
+    }
+    #[cfg(target_os = "macos")]
+    {
+        "macos"
+    }
+    #[cfg(target_os = "linux")]
+    {
+        "linux"
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "linux"
+    )))]
+    {
+        "unknown"
+    }
 }
 
 #[command]

@@ -23,6 +23,10 @@ export async function performMediaScan(cardsPerPage?: number): Promise<void> {
 
 export async function executeStartup(isMounted: () => boolean = () => true): Promise<void> {
   try {
+    if (typeof bridge.initPlatform === 'function') {
+      await bridge.initPlatform();
+    }
+    if (!isMounted()) return;
     const cfg = await useSettingsStore.getState().loadConfig();
     if (!isMounted()) return;
     useApplicationStore.getState().dispatch('INIT_DONE');

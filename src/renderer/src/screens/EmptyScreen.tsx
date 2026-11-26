@@ -64,7 +64,7 @@ export interface EmptyScreenProps {
   root: string;
   videoCount: number;
   imageCount: number;
-  onSelectFolder: () => Promise<void> | void;
+  onSelectFolder?: () => Promise<void> | void;
   onRetry: () => Promise<void> | void;
 }
 
@@ -93,7 +93,7 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
   };
 
   const handleSelect = async () => {
-    if (busy) return;
+    if (busy || !onSelectFolder) return;
     AudioService.play('tap');
     setBusy(true);
     try {
@@ -130,15 +130,17 @@ export const EmptyScreen: React.FC<EmptyScreenProps> = ({
         {root && <div className={styles.pathChip}>{root}</div>}
 
         <div className={styles.actionsRow}>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={handleSelect}
-            disabled={busy}
-          >
-            <FolderOpen size={22} />
-            Select another folder
-          </button>
+          {onSelectFolder && (
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={handleSelect}
+              disabled={busy}
+            >
+              <FolderOpen size={22} />
+              Select another folder
+            </button>
+          )}
           <button
             type="button"
             className={styles.secondaryButton}

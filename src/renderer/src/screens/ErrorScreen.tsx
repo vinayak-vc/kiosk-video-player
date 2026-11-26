@@ -8,7 +8,7 @@ import styles from './StateScreens.module.css';
 export interface ErrorScreenProps {
   errorReason: string;
   mediaRoot?: string;
-  onSelectFolder: () => Promise<void> | void;
+  onSelectFolder?: () => Promise<void> | void;
   onRetry: () => Promise<void> | void;
 }
 
@@ -22,7 +22,7 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
   const presets = useAnimationPresets();
 
   const handleSelect = async () => {
-    if (busy) return;
+    if (busy || !onSelectFolder) return;
     AudioService.play('tap');
     setBusy(true);
     try {
@@ -60,15 +60,17 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
         {mediaRoot && <div className={styles.pathChip}>{mediaRoot}</div>}
 
         <div className={styles.actionsRow}>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={handleSelect}
-            disabled={busy}
-          >
-            <FolderOpen size={22} />
-            Select another folder
-          </button>
+          {onSelectFolder && (
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={handleSelect}
+              disabled={busy}
+            >
+              <FolderOpen size={22} />
+              Select another folder
+            </button>
+          )}
           <button
             type="button"
             className={styles.secondaryButton}

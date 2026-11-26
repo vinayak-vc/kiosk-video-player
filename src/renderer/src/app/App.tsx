@@ -122,6 +122,9 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  const selectFolderHandler =
+    bridge.platform === 'android' ? undefined : handleSelectFolder;
+
   const renderScreen = () => {
     switch (appState) {
       case 'INITIALIZING':
@@ -140,7 +143,7 @@ export const App: React.FC = () => {
           <ErrorScreen
             errorReason={errorReason ?? 'Failed to access media folder'}
             mediaRoot={mediaRoot || configRoot}
-            onSelectFolder={handleSelectFolder}
+            onSelectFolder={selectFolderHandler}
             onRetry={handleRetryScan}
           />
         );
@@ -161,7 +164,7 @@ export const App: React.FC = () => {
             <ErrorScreen
               errorReason="Selected video is no longer available"
               mediaRoot={mediaRoot || configRoot}
-              onSelectFolder={handleSelectFolder}
+              onSelectFolder={selectFolderHandler}
               onRetry={() => {
                 usePlayerStore.getState().clearSelection();
                 useApplicationStore.getState().dispatch('PLAYER_EXIT');
@@ -179,7 +182,7 @@ export const App: React.FC = () => {
               root={mediaRoot || configRoot}
               videoCount={videoCount}
               imageCount={imageCount}
-              onSelectFolder={handleSelectFolder}
+              onSelectFolder={selectFolderHandler}
               onRetry={handleRetryScan}
             />
           );

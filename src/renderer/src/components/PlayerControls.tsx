@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, Maximize2, Minimize2, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { useAnimationPresets } from '../hooks/useAnimationPresets';
 import { AudioService } from '../services/AudioService';
+import { bridge } from '../services/bridge';
 import styles from './PlayerControls.module.css';
 
 export function formatTime(seconds: number, isKnown = true): string {
@@ -284,19 +285,21 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                       />
                     </div>
 
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        AudioService.play('tap');
-                        onUserInteraction?.();
-                        onToggleFullscreen();
-                      }}
-                    >
-                      {isFullscreen ? <Minimize2 size={26} /> : <Maximize2 size={26} />}
-                    </button>
+                    {bridge.platform !== 'android' && (
+                      <button
+                        type="button"
+                        className={styles.iconButton}
+                        aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          AudioService.play('tap');
+                          onUserInteraction?.();
+                          onToggleFullscreen();
+                        }}
+                      >
+                        {isFullscreen ? <Minimize2 size={26} /> : <Maximize2 size={26} />}
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>

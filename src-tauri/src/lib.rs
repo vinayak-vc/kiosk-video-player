@@ -13,8 +13,9 @@ use watcher::MediaWatcher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = protocol::register_kiosk_media_protocol(tauri::Builder::default())
-        .plugin(tauri_plugin_dialog::init());
+    let builder = protocol::register_kiosk_media_protocol(tauri::Builder::default());
+    #[cfg(not(target_os = "android"))]
+    let builder = builder.plugin(tauri_plugin_dialog::init());
     builder
         .setup(|app| {
             let app_handle = app.handle().clone();
@@ -75,7 +76,8 @@ pub fn run() {
             commands::log_client_message,
             commands::exit_kiosk_app,
             commands::trigger_admin_shortcut,
-            commands::toggle_fullscreen
+            commands::toggle_fullscreen,
+            commands::get_platform
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

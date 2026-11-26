@@ -2,6 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Minimal capabilities for Kiosk Video Player main window",
+  "platforms": ["linux", "macOS", "windows"],
   "windows": ["main"],
   "permissions": [
     "core:default"

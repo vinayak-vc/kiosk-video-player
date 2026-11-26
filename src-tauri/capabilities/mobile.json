@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "Minimal capabilities for Kiosk Video Player on mobile (Android)",
+  "platforms": ["android", "iOS"],
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}
