@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect } from 'react';
 import { Stage } from '../components/Stage';
 import { bridge } from '../services/bridge';
+import { executeStartup, handleMediaChangedEvent, performMediaScan } from '../services/startup';
 import { useApplicationStore } from '../stores/applicationStore';
 import { useMediaStore } from '../stores/mediaStore';
-import { usePlayerStore } from '../stores/playerStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { GalleryScreen } from '../screens/GalleryScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
@@ -22,28 +22,11 @@ export const App: React.FC = () => {
   const imageCount = useMediaStore((s) => s.imageCount);
   const configRoot = useSettingsStore((s) => s.config.kiosk_media_root);
 
-  const performScan = useCallback(async (cardsPerPage?: number) => {
-    try {
-      const perPage = cardsPerPage ?? useSettingsStore.getState().config.cards_per_page;
-      const scan = await useMediaStore.getState().refresh(perPage);
-      if (scan && scan.errors.length > 0 && scan.items.length === 0) {
-        useApplicationStore
-          .getState()
-          .dispatch('SCAN_FAIL', { errorReason: scan.errors[0] });
-      } else {
-        useApplicationStore.getState().dispatch('SCAN_OK');
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      useApplicationStore.getState().dispatch('SCAN_FAIL', { errorReason: msg });
-    }
-  }, []);
-
   const handleRetryScan = useCallback(async () => {
     const curState = useApplicationStore.getState().state;
     useApplicationStore.getState().dispatch(curState === 'ERROR' ? 'RETRY' : 'SCAN_START');
-    await performScan();
-  }, [performScan]);
+    await performMediaScan();
+  }, []);
 
   const handleSelectFolder = useCallback(async () => {
     try {
@@ -51,12 +34,12 @@ export const App: React.FC = () => {
       if (!picked) return;
       const updated = await useSettingsStore.getState().setMediaRoot(picked);
       useApplicationStore.getState().dispatch('SCAN_START');
-      await performScan(updated.cards_per_page);
+      await performMediaScan(updated.cards_per_page);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       useApplicationStore.getState().dispatch('FATAL_ERROR', { errorReason: msg });
     }
-  }, [performScan]);
+  }, []);
 
   // 1. Kiosk key guard, contextmenu, wheel zoom, and admin shortcut subscription
   useEffect(() => {
@@ -123,41 +106,17 @@ export const App: React.FC = () => {
   // 2. Startup flow + media-changed subscription
   useEffect(() => {
     let mounted = true;
-
-    const runStartup = async () => {
-      try {
-        const cfg = await useSettingsStore.getState().loadConfig();
-        if (!mounted) return;
-        useApplicationStore.getState().dispatch('INIT_DONE');
-        await performScan(cfg?.cards_per_page ?? 8);
-      } catch (err) {
-        if (!mounted) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        useApplicationStore.getState().dispatch('FATAL_ERROR', { errorReason: msg });
-      }
-    };
-
-    runStartup();
+    void executeStartup(() => mounted);
 
     const unlistenMedia = bridge.onMediaChanged(() => {
-      const cardsPerPage = useSettingsStore.getState().config.cards_per_page;
-      useMediaStore
-        .getState()
-        .refresh(cardsPerPage)
-        .then((scan) => {
-          const activeId = usePlayerStore.getState().selectedMediaId;
-          if (activeId && scan && !scan.items.some((item) => item.id === activeId)) {
-            bridge.logClientMessage('WARN', `Active media '${activeId}' was removed on disk`);
-          }
-        })
-        .catch(() => {});
+      void handleMediaChangedEvent().catch(() => {});
     });
 
     return () => {
       mounted = false;
       unlistenMedia.then((fn) => fn()).catch(() => {});
     };
-  }, [performScan]);
+  }, []);
 
   const renderScreen = () => {
     switch (appState) {

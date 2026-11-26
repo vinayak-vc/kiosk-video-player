@@ -63,12 +63,15 @@ export const TRANSITION_TABLE: Readonly<
   },
 };
 
+/**
+ * Only user-originated navigation events are swallowed by the transition lock.
+ * System events (`VIDEO_ENDED`, `IDLE_TIMEOUT`, `FATAL_ERROR`, `ADMIN_OPEN`) are
+ * never blocked so a short/failing clip or idle timeout cannot strand the app.
+ */
 export const LOCKABLE_EVENTS: ReadonlySet<AppEvent> = new Set<AppEvent>([
   'SELECT_MEDIA',
   'SLIDESHOW_TAP',
   'PLAYER_EXIT',
-  'VIDEO_ENDED',
-  'IDLE_TIMEOUT',
 ]);
 
 /**

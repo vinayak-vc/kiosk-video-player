@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ApplicationState } from '../types';
 import { LOCKABLE_EVENTS, transition, type AppEvent } from '../services/AppState';
+import { bridge } from '../services/bridge';
 
 export interface DispatchOptions {
   errorReason?: string | null;
@@ -19,11 +20,23 @@ export interface ApplicationStoreState {
 }
 
 let lockTimerId: ReturnType<typeof setTimeout> | null = null;
+const ILLEGAL_LOG_COOLDOWN_MS = 1000;
+const lastIllegalLogByReason = new Map<string, number>();
 
 function clearLockTimer() {
   if (lockTimerId !== null) {
     clearTimeout(lockTimerId);
     lockTimerId = null;
+  }
+}
+
+function logIllegalTransitionRateLimited(reason: string) {
+  console.warn(`[AppState] ${reason}`);
+  const now = Date.now();
+  const prev = lastIllegalLogByReason.get(reason) ?? 0;
+  if (now - prev >= ILLEGAL_LOG_COOLDOWN_MS) {
+    lastIllegalLogByReason.set(reason, now);
+    void bridge.logClientMessage('WARN', `[AppState] ${reason}`).catch(() => {});
   }
 }
 
@@ -61,7 +74,9 @@ export const useApplicationStore = create<ApplicationStoreState>((set, get) => (
 
     const res = transition(current.state, event);
     if (!res.accepted) {
-      console.warn(`[AppState] ${res.reason}`);
+      if (res.reason) {
+        logIllegalTransitionRateLimited(res.reason);
+      }
       return false;
     }
 
@@ -87,6 +102,7 @@ export const useApplicationStore = create<ApplicationStoreState>((set, get) => (
 
   reset: () => {
     clearLockTimer();
+    lastIllegalLogByReason.clear();
     set({
       state: 'INITIALIZING',
       previousState: null,
