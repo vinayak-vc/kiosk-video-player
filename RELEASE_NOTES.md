@@ -21,7 +21,7 @@
   - Switchable slideshow modes: `screensaver`, `shuffle`, and `sequential`.
   - True A/B dual video element crossfade: next video preloads in the inactive slot (`preload="auto"`, `muted=true`), crossfading only after `canplay` readiness is achieved to prevent black frames or audio pops.
 - **Robust Single State Machine**: Unified central transition table across 7 states (`INITIALIZING`, `SCANNING_MEDIA`, `GALLERY`, `INDIVIDUAL_PLAYER`, `SLIDESHOW`, `ADMIN_PANEL`, `ERROR`) with transition locks against rapid double-taps.
-- **Hardware & Playback Diagnostics**: In-app live probe measuring storage permissions, media root availability, video playback engine readiness, audio synthesis, and display resolution scaling, with one-tap export to disk (`diagnostics.txt`).
+- **Hardware & Playback Diagnostics**: In-app probe that really loads and plays every clip in the media folder (resolution, duration, first-frame latency, dropped frames, a seek test, errors), lists which video codecs the device reports as supported, and writes the report to `diagnostics.txt`.
 - **Android Kiosk Mode**:
   - Sticky immersive fullscreen hiding status bar and navigation pill.
   - Continuous `FLAG_KEEP_SCREEN_ON` wake-lock preventing panel sleep or dimming.
@@ -86,11 +86,11 @@ RETURN_TO_GALLERY_ON_END=true
 ### Admin Features & Diagnostics
 - **Live Folder Health**: Displays validated media folder, active item counts, orphan counts, and screensaver status.
 - **Hardware & Playback Diagnostics**:
-  - Run real diagnostic probes directly on the TV hardware.
-  - Tap **Export Diagnostics** to write a comprehensive system snapshot to:
-    - Android: `/sdcard/Kiosk/diagnostics.txt` (and app files fallback).
-    - Windows: `C:\Kiosk\diagnostics.txt`.
-  - The exported `diagnostics.txt` captures Android OS version, display resolution/DPI, memory status, storage access, media scan counts, and video decoder test results.
+  - Tap **Run Diagnostics**. It probes every clip one after another and shows the report on screen.
+  - The report is saved automatically next to the media folder (the folder above it):
+    - Android: `/sdcard/Kiosk/diagnostics.txt` (default media folder).
+    - Windows: the parent of the media folder, e.g. `C:\Kiosk\diagnostics.txt`.
+  - It contains device/WebView info, display size and density, codec support, per-clip results and a verdict computed from them. Please send this file back after the first run on the TV.
 - **Test Playback**: Built-in test video player inside the Admin Panel to verify video decoding and sound independently of the gallery.
 - **Kiosk Exit**: Protected button to gracefully exit the application.
 
