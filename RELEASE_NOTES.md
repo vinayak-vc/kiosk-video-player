@@ -15,6 +15,10 @@ Version **1.0.1** adds 32-bit ARM (`armeabi-v7a`) native binary support alongsid
   - `armeabi-v7a`: 32-bit ARM for education/commercial touch panels (e.g., Teachmint C-T982-81-A62D on Android 11 with 32-bit userland).
   - `x86_64`: 64-bit x86 for developer workstation emulators.
   - *Verification note*: `armeabi-v7a` is cross-compiled with 32-bit integer/pointer validation and packaged as valid 32-bit ARM ELF binaries; runtime execution on physical 32-bit hardware is pending on-site panel staging.
+- **Standalone Windows x64 NSIS Installer**:
+  - Complete Windows x64 standalone installer package (`windows-out/kiosk-video-player-v1.0.1-x64-setup.exe`, 1.58 MB) with automated/silent (`/S`) install and clean uninstall.
+  - Fullscreen exclusive kiosk window, borderless, context menu disabled, `Ctrl+Alt+Q` exit guard, `Ctrl+Alt+S` admin hotkey.
+  - Supports `C:\Kiosk\Media\` default media path, `.env` / `kiosk.env` beside the executable, and persisted admin overrides in `%APPDATA%\com.viitor.kioskplayer\config.json`.
 - **Legacy WebView & CSS Compatibility (Chrome 80+ / ES2019)**:
   - Vite build target lowered to `['chrome80', 'es2019']` and `build.cssTarget: 'chrome80'`.
   - CSS transpilation expands `inset: 0` to cross-version `top: 0; right: 0; bottom: 0; left: 0;` across all screens.
@@ -68,6 +72,22 @@ This script automatically waits for the TV/panel, installs the release APK with 
    - If prompted, permit "Install unknown apps" for the file manager.
 4. Launch **Kiosk Video Player**.
 5. On initial launch, when prompted with "Grant file access", tap the button to enable **Allow access to manage all files** in Android Settings, then press the TV remote's Back button to return to the app.
+
+### Option C: Standalone Windows Installation (x64 PC / Surface / Intel NUC)
+
+1. **Installer**: Download `kiosk-video-player-v1.0.1-x64-setup.exe` from `windows-out/` (or GitHub Releases).
+   - SHA-256 Checksum: `e715325c58ce9c977ba9fca44a631cabe5ebec854b6568297f93e0eea7a5891b`
+2. **Interactive Install**: Double-click the installer and follow setup prompts.
+   - *SmartScreen Note*: Because the installer is unsigned with a commercial EV certificate, Windows Defender SmartScreen may display *"Windows protected your PC"*. Click **More info** -> **Run anyway**.
+3. **Silent Automated Install**:
+   ```powershell
+   .\kiosk-video-player-v1.0.1-x64-setup.exe /S
+   ```
+4. **Media Path**: Place video pairs and `Screensaver.mp4` into `C:\Kiosk\Media\`.
+5. **Kiosk Control**:
+   - Exit: **`Ctrl + Alt + Q`** (`Escape` blocked)
+   - Admin Panel: **`Ctrl + Alt + S`** (or 2-second hold top-left corner)
+   - Uninstall: Windows Settings -> Installed Apps -> Kiosk Video Player -> Uninstall (or `uninstall.exe /S`).
 
 ---
 
@@ -125,4 +145,4 @@ The application has been extensively tested with 151 unit/integration tests, 4 P
 4. **Boot Auto-Start**: While `BOOT_COMPLETED` receiver is registered, TV manufacturer firmware (e.g., custom launcher skins, power-saving policies) may restrict background auto-launch without setting the app as default launcher or configuring manufacturer autostart settings.
 5. **Physical Touch Responsiveness & Multi-Touch**: Multi-touch and palm rejection algorithms have been implemented, but final touch latency and tactile feel must be verified on the physical IR/capacitive touch overlay.
 6. **Multi-Day Memory Soak**: Soak test verified flat memory stability for 30 minutes (+2.09 MB PSS) on the emulator; multi-day continuous stress testing on the real panel remains pending.
-7. **Windows Packaged Installer**: Desktop Windows NSIS packaging (card BT-29) was paused per Lead instruction to focus strictly on Android-first touch panel deliverables.
+7. **Windows Code Signing Certificate**: The Windows x64 NSIS installer is unsigned with a commercial EV certificate; Windows Defender SmartScreen will show an unrecognized publisher warning upon first launch. Users must select "More info" -> "Run anyway", verifying binary integrity via the provided `.sha256` checksum.

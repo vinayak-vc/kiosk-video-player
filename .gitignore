@@ -42,6 +42,11 @@ android-out/*
 *.apk
 *.aab
 
+# Windows build outputs & handover artifacts
+windows-out/*
+!windows-out/INSTALL.md
+!windows-out/*.sha256
+
 # Test outputs
 test-results/
 test-fixtures/
