@@ -38,6 +38,7 @@ target/
 # Android build outputs & sideload handover artifacts
 android-out/*
 !android-out/INSTALL.md
+!android-out/*.sha256
 *.apk
 *.aab
 

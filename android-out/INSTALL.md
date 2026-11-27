@@ -3,11 +3,11 @@
 This folder contains the production signed Universal Release APK (`arm64-v8a` + `x86_64`) for deployment on the 75-inch touch Android TV.
 
 ## Build Information
-- **File**: `kiosk-video-player-v1.0.0-release.apk`
+- **File**: `kiosk-video-player-v1.0.0.apk`
 - **Version**: 1.0.0 (versionCode 10001)
-- **Size**: 11,634,411 bytes (11.1 MB)
+- **Size**: 11,664,539 bytes (11.12 MB)
 - **Built**: 2026-11-27 (Signed with official release keystore via APK Signature Scheme v2)
-- **SHA-256**: `ad654337e5996ee56343a1dd43e1e3d8a1ef84a0a76de119a8b90731965a4787`
+- **SHA-256**: `24c42db4e762149ad58acc490a4e83f51bbe3e7d6e855d005a59e70d83b63273`
 - **Certificate DN**: `CN=Viitor Kiosk Player, OU=Engineering, O=Viitor, L=Mumbai, ST=Maharashtra, C=IN`
 - **Architectures**: `arm64-v8a` (75" Android TV target), `x86_64` (emulator / dev)
 
@@ -22,7 +22,7 @@ npm run android:install
 
 This script automatically:
 1. Waits for the TV to be online over ADB
-2. Installs `kiosk-video-player-v1.0.0-release.apk` with `-r -d`
+2. Installs `kiosk-video-player-v1.0.0.apk` with `-r -d`
 3. Automatically grants `MANAGE_EXTERNAL_STORAGE` permission via `appops`
 4. Creates `/sdcard/Kiosk/Media`
 5. Pushes sample Futurotec media pairs if empty
@@ -31,7 +31,7 @@ This script automatically:
 
 ## Option B: Install without `adb` (USB Flash Drive / TV File Manager)
 
-1. Copy `kiosk-video-player-v1.0.0-release.apk` onto a USB flash drive.
+1. Copy `kiosk-video-player-v1.0.0.apk` onto a USB flash drive.
 2. Plug the USB drive into the Android TV and open the TV's **File Manager** app.
 3. Tap the `.apk` file to install.
    - If prompted, open **Settings -> Install unknown apps** and enable permission for your File Manager.
