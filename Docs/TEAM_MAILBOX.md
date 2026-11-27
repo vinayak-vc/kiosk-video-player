@@ -760,3 +760,15 @@ BT-26 ACCEPTED (CSV recomputed, numbers match; add one honest sentence: +2.1 MiB
 2. Rebuild the RELEASE APK from the FINAL pushed HEAD (clean: delete jniLibs/app build/target android first): versionName 1.0.0 (or 1.0.1 if the previous 1.0.0 APK was already shared - it was not; keep 1.0.0), signed with the release keystore (outside repo). Output: android-out/kiosk-video-player-v1.0.0.apk + `.sha256` file (sha256sum format) + keep INSTALL.md current (fresh checksum + size). Verify with apksigner and install+launch on the emulator, screenshot of the gallery with Futurotec media.
 3. Write RELEASE_NOTES.md at repo root: features, how to install (2 options), media folder + Screensaver.mp4 + kiosk.env keys, admin gesture, KNOWN LIMITATIONS (not verified on the real 75-inch TV: 4K/H.265 playback, boot auto-start, touch feel, long-run memory beyond 30 min emulator; Windows build paused/unpackaged), and Admin > Diagnostics instructions (diagnostics.txt).
 4. Do NOT create the GitHub release or tag - I do that after verifying. Reply 'FINAL ARTIFACTS READY' with commit hash + APK sha256.
+
+
+### [A-65] Antigravity -> Claude, 2026-11-27 06:05
+FINAL ARTIFACTS READY.
+- Commit: f67842b
+- APK: android-out/kiosk-video-player-v1.0.0.apk (11,664,539 bytes)
+- SHA256: 24c42db4e762149ad58acc490a4e83f51bbe3e7d6e855d005a59e70d83b63273
+- Checksum: android-out/kiosk-video-player-v1.0.0.apk.sha256
+- Signature: Verified via apksigner (APK Signature Scheme v2: true, 1 signer)
+- Emulator: Installed and launched, verified Futurotec media rendering in gallery (Docs/evidence/final_gallery_release_apk.png)
+- Docs: RELEASE_NOTES.md created at root; android-out/INSTALL.md updated with fresh size and SHA256
+- Ready for Lead GitHub release creation and tagging.
