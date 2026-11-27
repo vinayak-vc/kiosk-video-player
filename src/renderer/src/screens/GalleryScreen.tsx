@@ -29,11 +29,30 @@ export const GalleryScreen: React.FC = () => {
   const cardsPerPage = useSettingsStore((s) => s.config.cards_per_page);
   const dispatch = useApplicationStore((s) => s.dispatch);
   const isTransitionLocked = useApplicationStore((s) => s.isTransitionLocked);
+  const previousState = useApplicationStore((s) => s.previousState);
   const selectMedia = usePlayerStore((s) => s.selectMedia);
 
   const presets = useAnimationPresets();
 
   const [direction, setDirection] = useState(1);
+
+  // BT-46 Tap-through guard: detect if entering from SLIDESHOW
+  const fromSlideshowRef = useRef(previousState === 'SLIDESHOW');
+  const enterTimeRef = useRef(Date.now());
+  const pointerReleasedRef = useRef(false);
+
+  useEffect(() => {
+    if (!fromSlideshowRef.current) return;
+    const onRelease = () => {
+      pointerReleasedRef.current = true;
+    };
+    window.addEventListener('pointerup', onRelease, { capture: true });
+    window.addEventListener('touchend', onRelease, { capture: true });
+    return () => {
+      window.removeEventListener('pointerup', onRelease, { capture: true });
+      window.removeEventListener('touchend', onRelease, { capture: true });
+    };
+  }, []);
 
   const totalPages = computeTotalPages(items.length, cardsPerPage);
   const pageItems = useMemo(
@@ -73,7 +92,15 @@ export const GalleryScreen: React.FC = () => {
         didSwipeRef.current = false;
         return;
       }
-      if (isTransitionLocked) return;
+      if (isTransitionLocked || useApplicationStore.getState().isTransitionLocked) return;
+
+      // BT-46 Tap-through guard: ignore card selection until pointer is released AND 450ms elapsed after entering from SLIDESHOW
+      if (fromSlideshowRef.current) {
+        if (Date.now() - enterTimeRef.current < 450) {
+          return;
+        }
+        fromSlideshowRef.current = false;
+      }
 
       const accepted = dispatch('SELECT_MEDIA', { lockDurationMs: 500 });
       if (!accepted) return;

@@ -364,13 +364,33 @@ export const SlideshowScreen: React.FC = () => {
       if (e.isPrimary === false) return;
       if (exitingRef.current) return;
 
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Consume the whole gesture: swallow trailing pointerup, touchend & click in capture phase
+      const swallow = (ev: Event) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (typeof (ev as MouseEvent).stopImmediatePropagation === 'function') {
+          (ev as MouseEvent).stopImmediatePropagation();
+        }
+      };
+      window.addEventListener('pointerup', swallow, { capture: true });
+      window.addEventListener('touchend', swallow, { capture: true });
+      window.addEventListener('click', swallow, { capture: true });
+      setTimeout(() => {
+        window.removeEventListener('pointerup', swallow, { capture: true });
+        window.removeEventListener('touchend', swallow, { capture: true });
+        window.removeEventListener('click', swallow, { capture: true });
+      }, 500);
+
       // Dispatch FIRST — SLIDESHOW_TAP is never lockable, so this always
       // succeeds from SLIDESHOW state. If (hypothetically) the transition is
       // rejected we must NOT set exitingRef or release videos, otherwise the
       // screen is permanently stranded on a black frame.
       void AudioService.resumeOnGesture();
       AudioService.play('return');
-      const accepted = dispatch('SLIDESHOW_TAP');
+      const accepted = dispatch('SLIDESHOW_TAP', { lockDurationMs: 450 });
       if (!accepted) return;
 
       exitingRef.current = true;
@@ -392,6 +412,11 @@ export const SlideshowScreen: React.FC = () => {
       animate="visible"
       exit="exit"
       onPointerDown={handleTapExit}
+      onPointerUp={handleTapExit}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     >
       <video
         ref={videoARef}
