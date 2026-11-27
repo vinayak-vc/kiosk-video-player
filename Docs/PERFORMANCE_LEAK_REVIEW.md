@@ -80,7 +80,7 @@ This document provides the formal audit and empirical verification for the Kiosk
   - **Java Heap**: 2.48 MB
   - **Active WebViews**: exactly 1 (zero leakage)
 - **Verdict**: **PASS (Emulator Native Memory)**. Native memory is completely stable within a ~73–78 MB band across 30 continuous minutes of active video transitions, with zero WebView or native memory accumulation.
-- **Target Hardware Notice**: Physical 75-inch TV hardware on-site verification remains required upon deployment using the built-in Admin Panel Hardware & Playback Diagnostics tool.
+- **Target Hardware & Soak Note**: +2.1 MiB/29 min on emulator, multi-day TV soak pending. Physical 75-inch TV hardware on-site verification remains required upon deployment using the built-in Admin Panel Hardware & Playback Diagnostics tool.
 
 ---
 
