@@ -98,6 +98,41 @@ async function main() {
     const comment = process.argv[4];
     const res = await addComment(taskId, comment);
     console.log(`Comment on ${taskId}:`, res.status, res.data || res.raw);
+  } else if (cmd === 'mail') {
+    const res = await request({
+      host: '127.0.0.1',
+      port: 8766,
+      path: '/api/mailbox?project=kiosk',
+      method: 'GET',
+      headers: { Authorization: auth }
+    });
+    const msgs = (res.data && res.data.messages) || [];
+    console.log(`Total messages: ${msgs.length}`);
+    const count = parseInt(process.argv[3] || '5', 10);
+    const slice = msgs.slice(-count);
+    for (const m of slice) {
+      console.log(`\n=== [${m.id}] ${m.sender} -> ${m.recipientRaw} (${m.timestamp}) ===`);
+      console.log(m.body || m.text || '');
+    }
+  } else if (cmd === 'sendmail') {
+    const text = process.argv[3];
+    const data = JSON.stringify({
+      sender: 'Antigravity',
+      recipient: 'Claude',
+      body: text
+    });
+    const res = await request({
+      host: '127.0.0.1',
+      port: 8766,
+      path: '/api/mailbox?project=kiosk',
+      method: 'POST',
+      headers: {
+        Authorization: auth,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data)
+      }
+    }, data);
+    console.log('Send mail result:', res.status, res.data || res.raw);
   }
 }
 
