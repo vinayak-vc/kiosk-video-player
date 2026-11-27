@@ -38,10 +38,10 @@ On large 75-inch wall-mounted displays, users stand 0.5m to 1.5m away and tap wi
 | UI Component | Stage Size (CSS px at 1080p) | Physical Pixels at 4K (2.0×) | Physical Metric Size on 75" | Ergonomic Assessment |
 | :--- | :--- | :--- | :--- | :--- |
 | **Media Card (Gallery)** | 260–380 × 180–260 px | 520–760 × 360–520 px | **22.5–32.8 cm × 15.5–22.5 cm** | Massive, effortless whole-hand or single-finger tap target. Zero miss rate. |
-| **Player Back Button** | 72 × 72 px (min) | 144 × 144 px | **6.2 cm × 6.2 cm (2.45")** | Broad circular button with text label; comfortable standing tap. |
-| **Play/Pause Center Indicator** | 112 × 112 px | 224 × 224 px | **9.7 cm × 9.7 cm (3.82")** | Prominent center indicator with high-contrast cyan glow. |
-| **Player Action Buttons** | 72 × 72 px | 144 × 144 px | **6.2 cm × 6.2 cm (2.45")** | Play, Pause, Mute, Seek +/-10s, Replay buttons. |
-| **Custom Volume Slider** | 140 × 64 px (min) | 280 × 128 px | **12.1 cm × 5.5 cm (4.76" × 2.17")** | Full pointer-capture slider with 24px thumb; hit area >=64px tall. |
+| **Player Back Button** | 100 × 56 px | 200 × 112 px | **8.6 cm × 4.8 cm (3.4" × 1.9")** | Broad pill button with text label; comfortable standing tap (>=56px touch target). |
+| **Play/Pause Center Indicator** | 80 × 80 px | 160 × 160 px | **6.9 cm × 6.9 cm (2.72")** | Prominent center indicator with high-contrast cyan glow; centered exactly at (960, 540) stage center (deltaX=0.0px, deltaY=0.0px). |
+| **Player Action Buttons** | 56 × 56 px | 112 × 112 px | **4.8 cm × 4.8 cm (1.9")** | Play, Pause, Mute, Fullscreen buttons with min 56px touch target. |
+| **Custom Volume Slider** | 110 × 56 px (min) | 220 × 112 px | **9.5 cm × 4.8 cm (3.74" × 1.9")** | Full pointer-capture slider with 20px thumb; hit area >=56px tall. |
 | **Timeline Track Scrubber** | 100% width × 40 px | 100% width × 80 px | **Height 1.73 cm (17.3 mm)** | Large scrubbing area with `touch-action: none` and 22px thumb. Cancel aborts scrub. |
 | **Admin Hotspot (Top-Left)** | 120 × 120 px coordinate zone | 240 × 240 px | **10.4 cm × 10.4 cm (4.09")** | Seamless coordinate check; ignores visual occlusion, 2s hold. |
 | **Gallery Page Arrows** | 64 × 64 px | 128 × 128 px | **5.5 cm × 5.5 cm (2.17")** | Clear navigation buttons flanking the media grid. |

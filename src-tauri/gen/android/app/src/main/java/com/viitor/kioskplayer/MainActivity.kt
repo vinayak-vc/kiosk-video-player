@@ -49,6 +49,8 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: android.webkit.WebView) {
     super.onWebViewCreate(webView)
+    // Guarantee pitch-black background on hardware video surfaces & letterbox gutters
+    webView.setBackgroundColor(android.graphics.Color.BLACK)
     // Enable seamless video autoplay with audio for kiosk touch TV
     webView.settings.mediaPlaybackRequiresUserGesture = false
   }

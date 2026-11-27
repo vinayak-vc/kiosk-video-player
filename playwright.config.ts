@@ -27,6 +27,9 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1920, height: 1080 },
         hasTouch: true,
+        launchOptions: {
+          args: ['--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'],
+        },
       },
     },
   ],

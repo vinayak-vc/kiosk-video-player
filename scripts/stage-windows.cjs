@@ -13,7 +13,7 @@ if (!fs.existsSync(outDir)) {
 
 for (const f of files) {
   const srcPath = path.join(srcDir, f);
-  const targetName = 'kiosk-video-player-v1.0.1-x64-setup.exe';
+  const targetName = 'kiosk-video-player-v1.0.2-x64-setup.exe';
   const destPath = path.join(outDir, targetName);
   fs.copyFileSync(srcPath, destPath);
   const buf = fs.readFileSync(destPath);

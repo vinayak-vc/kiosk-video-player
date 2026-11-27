@@ -1,13 +1,13 @@
-# Kiosk Video Player — Android Sideload & Test Guide (v1.0.1 Production Release)
+# Kiosk Video Player — Android Sideload & Test Guide (v1.0.2 Production Release)
 
 This folder contains the production signed Universal Release APK (`arm64-v8a` + `armeabi-v7a` + `x86_64`) for deployment on 75-inch touch Android TVs and Teachmint interactive touch panels.
 
 ## Build Information
-- **File**: `kiosk-video-player-v1.0.1.apk`
-- **Version**: 1.0.1 (versionCode 10002)
-- **Size**: 14,991,205 bytes (14.3 MB)
+- **File**: `kiosk-video-player-v1.0.2.apk`
+- **Version**: 1.0.2 (versionCode 10003)
+- **Size**: 14,991,445 bytes (14.3 MB)
 - **Built**: 2026-11-27 (Signed with official release keystore via APK Signature Scheme v2)
-- **SHA-256**: `d7b33c9afbb988e56416e40861dab1802c26af4b73ff5385df4066637e4f2cce`
+- **SHA-256**: `f284f55068d2e75abcf7016422327bc5c7951a89f8569a8a7fe649a3ea4dcc05`
 - **Certificate DN**: `CN=Viitor Kiosk Player, OU=Engineering, O=Viitor, L=Mumbai, ST=Maharashtra, C=IN`
 - **Architectures**:
   - `arm64-v8a`: 64-bit ARM (standard Android TV 12+ targets)

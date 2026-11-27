@@ -24,9 +24,10 @@ export interface UsePlayerInteractionResult {
 }
 
 /**
- * Implements Brief §7 Tap Contract & Auto-Hide using Pointer Events only:
- * - Controls hidden + tap blank surface -> show controls AND toggle playback
- * - Controls visible + tap blank surface -> toggle playback AND hide controls
+ * Implements Brief §7 & BT-47 Tap Contract & Auto-Hide using Pointer Events only:
+ * - Controls hidden + tap blank surface -> ONLY reveal controls (zero playback toggle)
+ * - Controls visible + tap blank surface -> toggle play/pause (controls stay visible after pause)
+ * - Tap on control -> only that control acts and resets auto-hide timer
  * - Auto-hide after `controls_auto_hide_seconds` ONLY while playing (paused keeps visible)
  * - 250ms tap debounce prevents desync from rapid tapping
  * - Rejects drags (>10px) and long presses (>400ms)
@@ -133,11 +134,13 @@ export function usePlayerInteraction({
       AudioService.play('tap');
 
       const currentVisible = usePlayerStore.getState().controlsVisible;
-      // Spec §7:
-      // - Controls hidden + tap blank surface -> show controls AND toggle play/pause
-      // - Controls visible + tap blank surface -> toggle play/pause AND hide controls
-      usePlayerStore.getState().setControlsVisible(!currentVisible);
-      togglePlaybackFromElement();
+      if (!currentVisible) {
+        // BT-47: Controls HIDDEN: first tap on blank surface ONLY reveals controls (no playback toggle)
+        usePlayerStore.getState().setControlsVisible(true);
+      } else {
+        // BT-47: Controls VISIBLE: tap on blank surface toggles play/pause
+        togglePlaybackFromElement();
+      }
     },
     [disabled, togglePlaybackFromElement]
   );

@@ -1,14 +1,33 @@
-# Kiosk Video Player — Release Notes (v1.0.1)
+# Kiosk Video Player — Release Notes (v1.0.2)
 
 ## Overview
 
-**Kiosk Video Player** is a standalone, offline kiosk video playback application built with **Tauri v2**, **React 19**, **TypeScript**, **Zustand**, and **Framer Motion**, engineered for commercial touch displays (landscape 16:9, reference stage 1920×1080 scaled to physical 3840×2160 UHD) running Android TV 11+ / Android 14+.
-
-Version **1.0.1** adds 32-bit ARM (`armeabi-v7a`) native binary support alongside 64-bit ARM (`arm64-v8a`) and x86_64 emulator support, specifically accommodating interactive touch panels such as the **Teachmint Interactive Panel** (Model C-T982-81-A62D, Android 11 / API 30, kernel 5.4.125), and lowers the frontend compiler target to **Chrome 80+ / ES2019** for older system WebViews.
+**Kiosk Video Player** is a standalone, offline kiosk video playback application built with **Tauri v2**, **React 19**, **TypeScript**, **Zustand**, and **Framer Motion**, engineered for commercial touch displays (landscape 16:9, reference stage 1920×1080 scaled to physical 3840×2160 UHD) running Android TV 11+ / Android 14+ and Windows 10/11 x64.
 
 ---
 
-## 1. What's New in v1.0.1
+## 1. What's New in v1.0.2
+
+- **Screensaver Tap-Through Bug Fix (BT-46)**:
+  - Fixed issue where tapping during screensaver/slideshow exited to gallery AND opened the video card positioned beneath the finger.
+  - The slideshow now consumes the complete touch gesture and attaches capture-phase window listeners to swallow trailing pointerup, touchend, and synthetic click events.
+  - The gallery enforces a 450 ms entry guard after entering from `SLIDESHOW`, completely ignoring card selection until the exit gesture is released and the guard window elapses. Normal gallery taps outside slideshow returns remain instantaneous.
+- **Player UI Centering & Gutter Elimination (BT-47)**:
+  - Fixed ~55px right offset on the center play overlay indicator: enclosed button in dedicated full-stage flexbox container (`inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none`), achieving exact `(960.0, 540.0)` stage centering (measured deltaX=0.0px, deltaY=0.0px in 1080p).
+  - Eliminated white side gutters during video letterboxing on Android: set `webView.setBackgroundColor(Color.BLACK)` in `MainActivity.kt` and styled `.playerStage`, `.videoElement`, and `.posterLayer` to `#000000; object-fit: contain`.
+  - Shrunk control bar and interactive elements ~30-35% for cleaner presentation while preserving touch targets >=56px (`centerIndicator`: 80×80px, `bottomPlayBtn`: 56×56px, `backBtn`: 100×56px, `volumeSlider`: 110×56px).
+- **New Player Tap Contract (BT-47)**:
+  - Controls **hidden** + tap blank video → **only** reveals controls (video stays playing; no accidental pause).
+  - Controls **visible** + tap blank video → toggles play/pause (controls remain visible when paused).
+  - Tap on any control button or slider → acts solely on that control and resets the auto-hide timer.
+  - Center play overlay button → toggles playback directly.
+- **Packaging & Artifacts**:
+  - Android Universal Release APK: `android-out/kiosk-video-player-v1.0.2.apk` (14.3 MB, tri-ABI `arm64-v8a` + `armeabi-v7a` + `x86_64`, v2 signed).
+  - Windows x64 NSIS Installer: `windows-out/kiosk-video-player-v1.0.2-x64-setup.exe`.
+
+---
+
+## 2. What's New in v1.0.1
 
 - **Tri-ABI Universal Android Binary**:
   - `arm64-v8a`: 64-bit ARM for modern Android TV 12+ and high-performance chipsets.
@@ -35,10 +54,10 @@ Version **1.0.1** adds 32-bit ARM (`armeabi-v7a`) native binary support alongsid
 - **Adaptive Gallery Grid**: Responsive 12-card pagination (4×3 on 75-inch TV) and 8-card (4×2) layout with glowing neon cinematic cards, high-contrast poster thumbnails, natural title sorting, and touch swipe / arrow navigation.
 - **Strict Media Matching**: Automatically pairs `<basename>.mp4` videos with corresponding `<basename>.png` (or `.jpg` / `.jpeg`) thumbnails. Case-insensitive pairing, root folder only, orphans and unsupported files counted and cleanly ignored.
 - **Cinematic Individual Player**: Seamless hero card-to-player zoom transition via Framer Motion layout animations. Custom touch-friendly controls (play/pause, touch-draggable timeline, elapsed/total time, volume slider, mute, fullscreen).
-- **Exact Tap Contract**:
-  - Controls hidden + tap blank video → reveal controls **and** toggle playback.
-  - Controls visible + tap blank video → hide controls **and** toggle playback.
-  - Tap on any control button/slider → acts only on that control (zero accidental hide/toggle).
+- **Exact Tap Contract (v1.0.2)**:
+  - Controls hidden + tap blank video → reveal controls **only** (playback continues uninterrupted).
+  - Controls visible + tap blank video → toggle play/pause (controls stay visible when paused).
+  - Tap on any control button/slider → acts only on that control (resets auto-hide timer; zero accidental hide/toggle).
   - Auto-hides controls after 4 seconds only while actively playing; paused state keeps controls visible.
 - **Screensaver & Dual-Video Crossfade Slideshow**:
   - Dedicated screensaver support: placing `Screensaver.mp4` in the media folder loops seamlessly when the kiosk is idle without appearing as a gallery card.

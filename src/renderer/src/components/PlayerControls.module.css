@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 36px 48px;
+  padding: 24px 36px;
 }
 
 .topBar {
@@ -17,53 +17,68 @@
 }
 
 .backButton {
-  min-width: 72px;
-  min-height: 72px;
-  padding: 0 24px;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0 18px;
   border-radius: var(--radius-full);
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(5, 8, 20, 0.86);
   color: var(--text-primary);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .backButton:hover {
   border-color: rgba(0, 240, 255, 0.65);
+  background: rgba(16, 26, 62, 0.92);
 }
 
 .titleBadge {
-  padding: 12px 24px;
+  padding: 8px 18px;
   border-radius: var(--radius-full);
   background: rgba(5, 8, 20, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.centerIndicator {
+/* Dedicated container spanning 100% stage with flex centering to guarantee exact 960,540 center */
+.centerOverlayContainer {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 112px;
-  height: 112px;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.centerIndicator {
+  width: 80px;
+  height: 80px;
   border-radius: var(--radius-full);
-  background: rgba(5, 8, 20, 0.82);
-  border: 2px solid rgba(0, 240, 255, 0.55);
-  box-shadow: 0 0 36px rgba(0, 128, 255, 0.35);
+  background: rgba(5, 8, 20, 0.84);
+  border: 2px solid rgba(0, 240, 255, 0.6);
+  box-shadow: 0 0 28px rgba(0, 128, 255, 0.4);
   color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.centerIndicator:hover {
+  border-color: rgba(0, 240, 255, 0.9);
+  box-shadow: 0 0 36px rgba(0, 240, 255, 0.65);
 }
 
 .bottomBar {
@@ -71,20 +86,20 @@
   width: 100%;
   max-width: 1680px;
   margin: 0 auto;
-  padding: 18px 28px;
-  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
   background: rgba(5, 8, 20, 0.88);
   border: 1px solid rgba(0, 240, 255, 0.28);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .timelineTrack {
   position: relative;
   width: 100%;
-  height: 40px;
+  height: 36px;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -99,7 +114,7 @@
 .timelineRail {
   position: relative;
   width: 100%;
-  height: 8px;
+  height: 6px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.16);
   overflow: visible;
@@ -114,12 +129,12 @@
 .timelineThumb {
   position: absolute;
   top: 50%;
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--radius-full);
   background: var(--accent-cyan);
   border: 2px solid #ffffff;
-  box-shadow: 0 0 14px rgba(0, 240, 255, 0.75);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.75);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -128,19 +143,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .leftGroup,
 .rightGroup {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .iconButton {
-  min-width: 72px;
-  min-height: 72px;
+  min-width: 56px;
+  min-height: 56px;
   border-radius: var(--radius-full);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(16, 26, 62, 0.75);
@@ -149,7 +164,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .iconButton:hover {
@@ -158,23 +173,23 @@
 }
 
 .timeLabel {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  min-width: 140px;
+  min-width: 110px;
 }
 
 .volumeGroup {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .customVolumeSlider {
   position: relative;
-  width: 140px;
-  height: 64px; /* Hit area >= 64px tall */
+  width: 110px;
+  height: 56px; /* Hit area >= 56px tall for touch target */
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -186,7 +201,7 @@
 .volumeRail {
   position: relative;
   width: 100%;
-  height: 8px;
+  height: 6px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.18);
   overflow: visible;
@@ -201,12 +216,12 @@
 .volumeThumb {
   position: absolute;
   top: 50%;
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--radius-full);
   background: #ffffff;
   border: 2px solid var(--accent-cyan);
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.65);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.65);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }

@@ -74,14 +74,24 @@ describe('Player Tap Contract (Brief §7) & Auto-Hide', () => {
     vi.useRealTimers();
   });
 
-  it('Rule (a) & (b): hidden+tap shows controls & pauses; visible+tap resumes & hides controls', () => {
+  it('BT-47 Tap Contract: hidden+tap ONLY reveals controls; visible+tap toggles play/pause', () => {
     render(<VideoPlayer item={SAMPLE_ITEM} />);
     const surface = screen.getByTestId('video-player-screen');
 
     expect(usePlayerStore.getState().controlsVisible).toBe(false);
     expect(usePlayerStore.getState().isPlaying).toBe(true);
 
-    // (a) Controls hidden + tap blank surface -> show controls AND pause
+    // (a) Controls hidden + tap blank surface -> ONLY reveals controls (video keeps playing!)
+    act(() => {
+      tapSurface(surface);
+    });
+    expect(usePlayerStore.getState().controlsVisible).toBe(true);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    // Advance past debounce
+    vi.advanceTimersByTime(TAP_DEBOUNCE_MS + 10);
+
+    // (b) Controls visible + tap blank surface -> toggles playback (pauses!)
     act(() => {
       tapSurface(surface);
     });
@@ -91,11 +101,11 @@ describe('Player Tap Contract (Brief §7) & Auto-Hide', () => {
     // Advance past debounce
     vi.advanceTimersByTime(TAP_DEBOUNCE_MS + 10);
 
-    // (b) Controls visible + tap blank surface -> resume AND hide controls
+    // (c) Controls visible + tap blank surface again -> toggles playback (resumes!)
     act(() => {
       tapSurface(surface);
     });
-    expect(usePlayerStore.getState().controlsVisible).toBe(false);
+    expect(usePlayerStore.getState().controlsVisible).toBe(true);
     expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 
@@ -103,7 +113,16 @@ describe('Player Tap Contract (Brief §7) & Auto-Hide', () => {
     render(<VideoPlayer item={SAMPLE_ITEM} />);
     const surface = screen.getByTestId('video-player-screen');
 
-    // Reveal controls (and pause) via surface tap
+    // Reveal controls via surface tap (video stays playing)
+    act(() => {
+      tapSurface(surface);
+    });
+    expect(usePlayerStore.getState().controlsVisible).toBe(true);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    vi.advanceTimersByTime(TAP_DEBOUNCE_MS + 10);
+
+    // Pause via surface tap
     act(() => {
       tapSurface(surface);
     });
@@ -146,7 +165,15 @@ describe('Player Tap Contract (Brief §7) & Auto-Hide', () => {
     const video = screen.getByTestId('kiosk-video-element');
     fireEvent(video, new Event('canplay'));
 
-    // Tap to show controls & pause
+    // Tap to show controls (video stays playing under new tap contract)
+    act(() => {
+      tapSurface(surface);
+    });
+    expect(usePlayerStore.getState().controlsVisible).toBe(true);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    // Tap again past debounce to pause playback
+    vi.advanceTimersByTime(300);
     act(() => {
       tapSurface(surface);
     });
@@ -183,10 +210,18 @@ describe('Player Tap Contract (Brief §7) & Auto-Hide', () => {
       tapSurface(surface);
     });
     expect(usePlayerStore.getState().controlsVisible).toBe(true);
-    expect(usePlayerStore.getState().isPlaying).toBe(false);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
 
-    // Second tap 100ms later -> debounced!
+    // Second tap 100ms later -> debounced! (still playing, not paused)
     vi.advanceTimersByTime(100);
+    act(() => {
+      tapSurface(surface);
+    });
+    expect(usePlayerStore.getState().controlsVisible).toBe(true);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    // Third tap 300ms later -> past debounce, toggles to pause!
+    vi.advanceTimersByTime(300);
     act(() => {
       tapSurface(surface);
     });

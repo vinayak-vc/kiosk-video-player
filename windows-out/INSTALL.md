@@ -1,15 +1,15 @@
-# Kiosk Video Player — Windows Installation & Deployment Guide (v1.0.1 x64 Release)
+# Kiosk Video Player — Windows Installation & Deployment Guide (v1.0.2 x64 Release)
 
 This directory contains the production NSIS x64 standalone installer for 64-bit Windows 10/11 kiosk installations.
 
 ## Build Information
-- **File**: `kiosk-video-player-v1.0.1-x64-setup.exe`
-- **Version**: 1.0.1
+- **File**: `kiosk-video-player-v1.0.2-x64-setup.exe`
+- **Version**: 1.0.2
 - **Platform**: Windows x64 (10/11)
-- **Size**: 1,660,966 bytes (1.58 MB)
+- **Size**: 1,661,107 bytes (1.58 MB)
 - **Built**: 2026-11-27
-- **SHA-256**: `e715325c58ce9c977ba9fca44a631cabe5ebec854b6568297f93e0eea7a5891b`
-- **Checksum file**: `kiosk-video-player-v1.0.1-x64-setup.exe.sha256`
+- **SHA-256**: `f03e045bcbcd76ea057de8a0f2c23ff057c3c9d4eacee284542269ffcafe5bc8`
+- **Checksum file**: `kiosk-video-player-v1.0.2-x64-setup.exe.sha256`
 
 ---
 

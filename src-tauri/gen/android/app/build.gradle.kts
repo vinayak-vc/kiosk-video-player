@@ -27,8 +27,8 @@ android {
         applicationId = "com.viitor.kioskplayer"
         minSdk = 26
         targetSdk = 36
-        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "10002").toInt()
-        versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0.1")
+        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "10003").toInt()
+        versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0.2")
     }
     signingConfigs {
         if (keystorePropsFile.exists()) {

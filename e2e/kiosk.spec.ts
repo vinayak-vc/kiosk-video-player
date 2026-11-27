@@ -162,7 +162,7 @@ test.describe('Kiosk Video Player E2E Integration Suites (BT-28)', () => {
     await expect(page.locator('[data-testid="gallery-screen"]')).toBeVisible();
   });
 
-  test('3. Player Tap Contract (tap blank toggles play/pause+hide/show; control tap keeps visible)', async ({
+  test('3. Player Tap Contract (tap blank reveals; tap while visible toggles play/pause)', async ({
     page,
   }) => {
     await setupKioskPage(page, { return_to_gallery_on_end: false });
@@ -178,8 +178,22 @@ test.describe('Kiosk Video Player E2E Integration Suites (BT-28)', () => {
 
     const controls = page.locator('[data-testid="player-controls-overlay"]');
 
-    // (a) Tap blank video surface: reveals controls AND pauses video
-    await playerScreen.tap({ position: { x: 960, y: 540 } });
+    // (a) Tap blank video surface (x: 500, y: 300 - away from center play button and bars)
+    // Reveals controls ONLY, video stays playing
+    await playerScreen.tap({ position: { x: 500, y: 300 } });
+    await expect(controls).toBeVisible();
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const v = document.querySelector('video');
+        return v ? !v.paused : false;
+      });
+    }).toBe(true);
+
+    // Wait past tap debounce (250ms)
+    await page.waitForTimeout(350);
+
+    // (b) Tap blank surface again while controls visible: pauses video, controls stay visible
+    await playerScreen.tap({ position: { x: 500, y: 300 } });
     await expect(controls).toBeVisible();
     await expect.poll(async () => {
       return page.evaluate(() => {
@@ -191,22 +205,7 @@ test.describe('Kiosk Video Player E2E Integration Suites (BT-28)', () => {
     // Wait past tap debounce (250ms)
     await page.waitForTimeout(350);
 
-    // (b) Tap blank surface again: hides controls AND resumes video
-    await playerScreen.tap({ position: { x: 960, y: 540 } });
-    await expect(controls).not.toBeVisible();
-    await expect.poll(async () => {
-      return page.evaluate(() => {
-        const v = document.querySelector('video');
-        return v ? !v.paused : false;
-      });
-    }).toBe(true);
-
-    // (c) Tap surface to show controls + pause again
-    await page.waitForTimeout(350);
-    await playerScreen.tap({ position: { x: 960, y: 540 } });
-    await expect(controls).toBeVisible();
-
-    // Click the bottom bar Play button inside controls: resumes playback, but controls STAY visible!
+    // (c) Click the bottom bar Play button inside controls: resumes playback, and controls STAY visible!
     const playBtn = page.getByRole('button', { name: 'Play', exact: true });
     await expect(playBtn).toBeVisible();
     await playBtn.click();
@@ -221,7 +220,7 @@ test.describe('Kiosk Video Player E2E Integration Suites (BT-28)', () => {
     }).toBe(true);
   });
 
-  test('4. Idle → Slideshow transition and Tap-exit back to Gallery', async ({ page }) => {
+  test('4. Idle → Slideshow transition and Tap-exit back to Gallery (BT-46 tap-through guard)', async ({ page }) => {
     // Configure a 2s idle timeout to test idle transition in real time
     await setupKioskPage(page, { idle_timeout_seconds: 2 });
 
@@ -232,10 +231,16 @@ test.describe('Kiosk Video Player E2E Integration Suites (BT-28)', () => {
     const slideshowScreen = page.locator('[data-testid="slideshow-screen"]');
     await expect(slideshowScreen).toBeVisible({ timeout: 5000 });
 
-    // Tap top header area (above the card grid) to exit slideshow without clicking a gallery card underneath
-    await slideshowScreen.tap({ position: { x: 960, y: 60 } });
+    // BT-46: Tap right over card 1's position on the screen to verify tap-through is guarded!
+    await slideshowScreen.tap({ position: { x: 400, y: 350 } });
 
-    // Immediately exits to gallery
+    // Immediately exits to gallery, card under finger does NOT open!
     await expect(page.locator('[data-testid="gallery-screen"]')).toBeVisible();
+    await expect(page.locator('[data-testid="video-player-screen"]')).not.toBeVisible();
+
+    // After 500ms guard expires, a subsequent tap on Card 1 DOES open the player
+    await page.waitForTimeout(500);
+    await page.getByRole('button', { name: 'Play Clip 1' }).click();
+    await expect(page.locator('[data-testid="video-player-screen"]')).toBeVisible();
   });
 });

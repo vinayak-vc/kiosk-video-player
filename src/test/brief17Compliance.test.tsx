@@ -208,7 +208,17 @@ describe('Brief §17 Compliance: App Logic & Playback Suites (BT-27)', () => {
 
       const surface = screen.getByTestId('video-player-screen');
 
-      // Surface tap reveals controls and pauses playback
+      // Surface tap reveals controls, video stays playing (BT-47 new contract)
+      act(() => {
+        fireEvent.pointerDown(surface, { clientX: 300, clientY: 300, pointerId: 1, isPrimary: true });
+        fireEvent.pointerUp(surface, { clientX: 300, clientY: 300, pointerId: 1, isPrimary: true });
+      });
+
+      expect(usePlayerStore.getState().controlsVisible).toBe(true);
+      expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+      // Second tap while controls visible pauses playback
+      vi.advanceTimersByTime(300);
       act(() => {
         fireEvent.pointerDown(surface, { clientX: 300, clientY: 300, pointerId: 1, isPrimary: true });
         fireEvent.pointerUp(surface, { clientX: 300, clientY: 300, pointerId: 1, isPrimary: true });

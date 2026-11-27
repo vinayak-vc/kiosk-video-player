@@ -210,36 +210,38 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   return (
     <AnimatePresence>
       {(visible || !isPlaying) && (
-        <div
-          className={styles.overlayRoot}
-          data-testid="player-controls-overlay"
-        >
-          {/* Center play/pause indicator when paused */}
+        <>
+          {/* BT-47: Dedicated full-stage container with flex centering to guarantee exact 960,540 center */}
           {!isPlaying && (
-            <motion.button
-              type="button"
-              className={styles.centerIndicator}
-              aria-label={STRINGS.player.resumePlayback}
-              data-testid="center-play-indicator"
-              variants={presets.controlReveal}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              onPointerDown={stopSurfacePropagation}
-              onPointerUp={stopSurfacePropagation}
-              onClick={(e) => {
-                e.stopPropagation();
-                AudioService.play('tap');
-                onUserInteraction?.();
-                onTogglePlay();
-              }}
-            >
-              <Play size={44} fill="currentColor" />
-            </motion.button>
+            <div className={styles.centerOverlayContainer}>
+              <motion.button
+                type="button"
+                className={styles.centerIndicator}
+                aria-label={STRINGS.player.resumePlayback}
+                data-testid="center-play-indicator"
+                variants={presets.controlReveal}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                onPointerDown={stopSurfacePropagation}
+                onPointerUp={stopSurfacePropagation}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  AudioService.play('tap');
+                  onUserInteraction?.();
+                  onTogglePlay();
+                }}
+              >
+                <Play size={34} fill="currentColor" />
+              </motion.button>
+            </div>
           )}
 
           {visible && (
-            <>
+            <div
+              className={styles.overlayRoot}
+              data-testid="player-controls-overlay"
+            >
               <motion.div
                 className={styles.topBar}
                 variants={presets.controlReveal}
@@ -259,7 +261,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     onBack();
                   }}
                 >
-                  <ArrowLeft size={22} />
+                  <ArrowLeft size={18} />
                   {STRINGS.player.back}
                 </button>
                 <div className={styles.titleBadge}>{title}</div>
@@ -316,7 +318,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         onTogglePlay();
                       }}
                     >
-                      {isPlaying ? <Pause size={30} /> : <Play size={30} fill="currentColor" />}
+                      {isPlaying ? <Pause size={22} /> : <Play size={22} fill="currentColor" />}
                     </button>
 
                     <span className={styles.timeLabel} data-testid="player-time-label">
@@ -337,7 +339,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                           onToggleMute();
                         }}
                       >
-                        {isMuted || volume === 0 ? <VolumeX size={28} /> : <Volume2 size={28} />}
+                        {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
                       </button>
 
                       <div
@@ -389,15 +391,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                           onToggleFullscreen();
                         }}
                       >
-                        {isFullscreen ? <Minimize2 size={26} /> : <Maximize2 size={26} />}
+                        {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                       </button>
                     )}
                   </div>
                 </div>
               </motion.div>
-            </>
+            </div>
           )}
-        </div>
+        </>
       )}
     </AnimatePresence>
   );
