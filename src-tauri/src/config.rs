@@ -158,7 +158,7 @@ pub fn resolve_env_path() -> Option<PathBuf> {
                 return Some(p);
             }
         }
-        return None;
+        None
     }
 
     #[cfg(not(target_os = "android"))]

@@ -121,11 +121,18 @@ export function computeVerdict(clips: ClipProbeResult[]): DiagnosticsVerdict {
   };
 }
 
+export function extractWebViewVersion(userAgent: string): string {
+  if (!userAgent) return 'Chrome/Unknown';
+  const match = userAgent.match(/(?:Chrome|Chromium)\/([0-9.]+)/i);
+  return match ? match[0] : 'Chrome/Unknown';
+}
+
 /**
  * Builds formatted ASCII report for disk persistence and UI presentation.
  */
 export function buildDiagnosticsReportText(params: DiagnosticsReportParams): string {
   const ts = params.timestamp || new Date().toISOString();
+  const webViewEngine = extractWebViewVersion(params.userAgent);
   const codecLines = params.codecCapabilities
     .map((c) => `  - ${c.name}: ${c.supported}`)
     .join('\n');
@@ -145,6 +152,7 @@ export function buildDiagnosticsReportText(params: DiagnosticsReportParams): str
     '================================================================',
     '          KIOSK VIDEO PLAYER HARDWARE DIAGNOSTICS REPORT         ',
     '================================================================',
+    `WebView / Browser Engine: ${webViewEngine}`,
     `Timestamp: ${ts}`,
     `Platform: ${params.platform.toUpperCase()}`,
     `Device User-Agent: ${params.userAgent}`,

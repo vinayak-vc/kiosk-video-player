@@ -1,12 +1,32 @@
-# Kiosk Video Player — Release Notes (v1.0.0)
+# Kiosk Video Player — Release Notes (v1.0.1)
 
 ## Overview
 
-**Kiosk Video Player** is a standalone, offline kiosk video playback application built with **Tauri v2**, **React 19**, **TypeScript**, **Zustand**, and **Framer Motion**, engineered for 75-inch commercial touch displays (landscape 16:9, reference stage 1920×1080 scaled to physical 3840×2160 UHD) running Android TV 12+ / Android 14+.
+**Kiosk Video Player** is a standalone, offline kiosk video playback application built with **Tauri v2**, **React 19**, **TypeScript**, **Zustand**, and **Framer Motion**, engineered for commercial touch displays (landscape 16:9, reference stage 1920×1080 scaled to physical 3840×2160 UHD) running Android TV 11+ / Android 14+.
+
+Version **1.0.1** adds 32-bit ARM (`armeabi-v7a`) native binary support alongside 64-bit ARM (`arm64-v8a`) and x86_64 emulator support, specifically accommodating interactive touch panels such as the **Teachmint Interactive Panel** (Model C-T982-81-A62D, Android 11 / API 30, kernel 5.4.125), and lowers the frontend compiler target to **Chrome 80+ / ES2019** for older system WebViews.
 
 ---
 
-## 1. Key Features
+## 1. What's New in v1.0.1
+
+- **Tri-ABI Universal Android Binary**:
+  - `arm64-v8a`: 64-bit ARM for modern Android TV 12+ and high-performance chipsets.
+  - `armeabi-v7a`: 32-bit ARM for education/commercial touch panels (e.g., Teachmint C-T982-81-A62D on Android 11 with 32-bit userland).
+  - `x86_64`: 64-bit x86 for developer workstation emulators.
+  - *Verification note*: `armeabi-v7a` is cross-compiled with 32-bit integer/pointer validation and packaged as valid 32-bit ARM ELF binaries; runtime execution on physical 32-bit hardware is pending on-site panel staging.
+- **Legacy WebView & CSS Compatibility (Chrome 80+ / ES2019)**:
+  - Vite build target lowered to `['chrome80', 'es2019']` and `build.cssTarget: 'chrome80'`.
+  - CSS transpilation expands `inset: 0` to cross-version `top: 0; right: 0; bottom: 0; left: 0;` across all screens.
+  - Height fallbacks added for containers utilizing CSS `aspect-ratio` (supported natively from Chrome 88+).
+  - Zero unsupported modern APIs (`structuredClone`, `Array.prototype.at`, `Object.hasOwn`).
+- **Live WebView Engine Detection**:
+  - Hardware Diagnostics probe and startup logger (`kiosk.log`) extract and display the exact Chrome/WebView version from `navigator.userAgent`.
+- **Package Size**: Universal APK size increased to ~15.9 MB to package all three native `.so` runtime engines.
+
+---
+
+## 2. Core Features
 
 - **Adaptive Gallery Grid**: Responsive 12-card pagination (4×3 on 75-inch TV) and 8-card (4×2) layout with glowing neon cinematic cards, high-contrast poster thumbnails, natural title sorting, and touch swipe / arrow navigation.
 - **Strict Media Matching**: Automatically pairs `<basename>.mp4` videos with corresponding `<basename>.png` (or `.jpg` / `.jpeg`) thumbnails. Case-insensitive pairing, root folder only, orphans and unsupported files counted and cleanly ignored.
@@ -30,7 +50,7 @@
 
 ---
 
-## 2. Installation Instructions
+## 3. Installation Instructions
 
 ### Option A: Automated ADB Installation (Recommended for Setup & Staging)
 From a connected PC over ADB (USB or Wi-Fi):
@@ -39,11 +59,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-android.ps1
 # Or via npm:
 npm run android:install
 ```
-This script automatically waits for the TV, installs the release APK with `-r -d`, grants `MANAGE_EXTERNAL_STORAGE` permission, creates `/sdcard/Kiosk/Media`, pushes sample media, and launches the player.
+This script automatically waits for the TV/panel, installs the release APK with `-r -d`, grants `MANAGE_EXTERNAL_STORAGE` permission, creates `/sdcard/Kiosk/Media`, pushes sample media, and launches the player.
 
 ### Option B: Sideload via USB Flash Drive / TV File Manager (No ADB Required)
-1. Copy `kiosk-video-player-v1.0.0.apk` onto a USB flash drive.
-2. Insert the flash drive into the 75-inch Android TV.
+1. Copy `kiosk-video-player-v1.0.1.apk` onto a USB flash drive.
+2. Insert the flash drive into the Android TV / Teachmint panel.
 3. Open the TV's **File Manager** (e.g., FX File Explorer or built-in File Manager) and tap the APK to install.
    - If prompted, permit "Install unknown apps" for the file manager.
 4. Launch **Kiosk Video Player**.
@@ -51,7 +71,7 @@ This script automatically waits for the TV, installs the release APK with `-r -d
 
 ---
 
-## 3. Media Folder, Screensaver & Configuration
+## 4. Media Folder, Screensaver & Configuration
 
 ### Media Placement
 - **Android Target**: `/sdcard/Kiosk/Media/` (canonical `/storage/emulated/0/Kiosk/Media/`)
@@ -77,10 +97,10 @@ RETURN_TO_GALLERY_ON_END=true
 
 ---
 
-## 4. Admin Panel Access & Hardware Diagnostics
+## 5. Admin Panel Access & Hardware Diagnostics
 
 ### Opening the Admin Panel
-- **Touch Gesture (75" TV)**: Press and hold the top-left 120×120 px corner of the display for **2 seconds**.
+- **Touch Gesture (75" TV / Panel)**: Press and hold the top-left 120×120 px corner of the display for **2 seconds**.
 - **Keyboard / Dev**: Press `Ctrl + Alt + S`.
 
 ### Admin Features & Diagnostics
@@ -96,11 +116,13 @@ RETURN_TO_GALLERY_ON_END=true
 
 ---
 
-## 5. Known Limitations & Target Hardware Notice
+## 6. Known Limitations & Target Hardware Notice
 
-The application has been extensively tested with 149 unit/integration tests, 4 Playwright E2E suites, and a 30-minute continuous emulator native memory soak (+2.1 MiB/29 min). However, the following items remain **unverified on physical 75-inch TV hardware** and require on-site validation upon staging:
-1. **Physical 75-inch TV Playback**: 4K UHD 60fps / H.265 hardware video decoding depends on the specific TV chipset and media decoder implementation. Staging verification is required using the Admin Diagnostics probe.
-2. **Boot Auto-Start**: While `BOOT_COMPLETED` receiver is registered, TV manufacturer firmware (e.g., custom launcher skins, power-saving policies) may restrict background auto-launch without setting the app as default launcher or configuring manufacturer autostart settings.
-3. **Physical Touch Responsiveness & Multi-Touch**: Multi-touch and palm rejection algorithms have been implemented, but final touch latency and tactile feel must be verified on the physical IR/capacitive touch overlay.
-4. **Multi-Day Memory Soak**: Soak test verified flat memory stability for 30 minutes (+2.09 MB PSS) on the emulator; multi-day continuous stress testing on the real TV panel remains pending.
-5. **Windows Packaged Installer**: Desktop Windows NSIS packaging (card BT-29) was paused per Lead instruction to focus strictly on Android-first 75-inch TV deliverables.
+The application has been extensively tested with 151 unit/integration tests, 4 Playwright E2E suites, and a 30-minute continuous emulator native memory soak (+2.1 MiB/29 min). However, the following items remain **unverified on physical Teachmint panel hardware** and require on-site validation upon staging:
+1. **Physical Panel Playback**: 4K UHD 60fps / H.265 hardware video decoding depends on the specific panel chipset and media decoder implementation. Staging verification is required using the Admin Diagnostics probe.
+2. **32-bit ARM (armeabi-v7a) Device Execution**: The 32-bit binary is compiled and packaged in the release APK, but the local emulator environment is x86_64. Physical 32-bit execution verification is pending on-site deployment.
+3. **Android System WebView Version**: Build targets Chrome 80+ with CSS/JS fallbacks, unverified on the physical Teachmint panel until sideload. If an extremely old WebView (< Chrome 80) is encountered, updating the Android System WebView package via APK sideload is recommended.
+4. **Boot Auto-Start**: While `BOOT_COMPLETED` receiver is registered, TV manufacturer firmware (e.g., custom launcher skins, power-saving policies) may restrict background auto-launch without setting the app as default launcher or configuring manufacturer autostart settings.
+5. **Physical Touch Responsiveness & Multi-Touch**: Multi-touch and palm rejection algorithms have been implemented, but final touch latency and tactile feel must be verified on the physical IR/capacitive touch overlay.
+6. **Multi-Day Memory Soak**: Soak test verified flat memory stability for 30 minutes (+2.09 MB PSS) on the emulator; multi-day continuous stress testing on the real panel remains pending.
+7. **Windows Packaged Installer**: Desktop Windows NSIS packaging (card BT-29) was paused per Lead instruction to focus strictly on Android-first touch panel deliverables.

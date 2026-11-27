@@ -3,6 +3,7 @@ import {
   computeVerdict,
   buildDiagnosticsReportText,
   probeSingleClip,
+  extractWebViewVersion,
   type ClipProbeResult,
 } from '../renderer/src/services/DiagnosticsService';
 
@@ -108,6 +109,18 @@ describe('DiagnosticsService', () => {
     });
   });
 
+  describe('extractWebViewVersion', () => {
+    it('extracts Chrome version from Android WebView userAgent', () => {
+      const ua = 'Mozilla/5.0 (Linux; U; Android 11; C-T982-81-A62D Build/RP1A.200720.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36';
+      expect(extractWebViewVersion(ua)).toBe('Chrome/83.0.4103.106');
+    });
+
+    it('handles userAgent without Chrome gracefully', () => {
+      expect(extractWebViewVersion('CustomAgent/1.0')).toBe('Chrome/Unknown');
+      expect(extractWebViewVersion('')).toBe('Chrome/Unknown');
+    });
+  });
+
   describe('buildDiagnosticsReportText', () => {
     it('formats a complete, human-readable report with all fields and saved path', () => {
       const clips: ClipProbeResult[] = [
@@ -145,6 +158,7 @@ describe('DiagnosticsService', () => {
       });
 
       expect(text).toContain('KIOSK VIDEO PLAYER HARDWARE DIAGNOSTICS REPORT');
+      expect(text).toContain('WebView / Browser Engine:');
       expect(text).toContain('Platform: ANDROID');
       expect(text).toContain('Physical Screen: 3840x2160 (DPR: 2)');
       expect(text).toContain('Media Root: /storage/emulated/0/Kiosk/Media');

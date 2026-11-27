@@ -1,15 +1,30 @@
-# Kiosk Video Player — Android Sideload & Test Guide (A8 Production Release)
+# Kiosk Video Player — Android Sideload & Test Guide (v1.0.1 Production Release)
 
-This folder contains the production signed Universal Release APK (`arm64-v8a` + `x86_64`) for deployment on the 75-inch touch Android TV.
+This folder contains the production signed Universal Release APK (`arm64-v8a` + `armeabi-v7a` + `x86_64`) for deployment on 75-inch touch Android TVs and Teachmint interactive touch panels.
 
 ## Build Information
-- **File**: `kiosk-video-player-v1.0.0.apk`
-- **Version**: 1.0.0 (versionCode 10001)
-- **Size**: 11,664,539 bytes (11.12 MB)
+- **File**: `kiosk-video-player-v1.0.1.apk`
+- **Version**: 1.0.1 (versionCode 10002)
+- **Size**: 14,991,205 bytes (14.3 MB)
 - **Built**: 2026-11-27 (Signed with official release keystore via APK Signature Scheme v2)
-- **SHA-256**: `24c42db4e762149ad58acc490a4e83f51bbe3e7d6e855d005a59e70d83b63273`
+- **SHA-256**: `d7b33c9afbb988e56416e40861dab1802c26af4b73ff5385df4066637e4f2cce`
 - **Certificate DN**: `CN=Viitor Kiosk Player, OU=Engineering, O=Viitor, L=Mumbai, ST=Maharashtra, C=IN`
-- **Architectures**: `arm64-v8a` (75" Android TV target), `x86_64` (emulator / dev)
+- **Architectures**:
+  - `arm64-v8a`: 64-bit ARM (standard Android TV 12+ targets)
+  - `armeabi-v7a`: 32-bit ARM (for panels running 32-bit userland e.g. Teachmint C-T982-81-A62D)
+  - `x86_64`: 64-bit x86 (emulator / developer workstations)
+
+### Inspecting Target Device CPU Architecture
+To check which ABI your target display / panel requires, connect over ADB and run:
+```powershell
+adb shell getprop ro.product.cpu.abilist
+```
+
+### Android System WebView Compatibility & Verification
+The web application is compiled specifically targeting **Chrome 80+ / ES2019** with CSS fallbacks for older WebView builds.
+- Check the active WebView version on the panel: **Settings > Apps > Android System WebView** (or **Developer Options > WebView implementation**).
+- Alternatively, launch the app, open the Admin Panel (long press top-left corner for 2 seconds), and tap **Run Diagnostics**. The generated report at `/sdcard/Kiosk/diagnostics.txt` prints the live browser engine as the very first line (`WebView Engine: Chrome/X.X.X.X`).
+- **Support claim**: Build targets Chrome 80+, unverified on physical Teachmint panel until sideload. If an older WebView (< Chrome 80) causes visual issues, updating the Android System WebView APK via USB sideload is strongly advised.
 
 ## Option A: One-Command Automated Install (Recommended via `adb`)
 
@@ -22,7 +37,7 @@ npm run android:install
 
 This script automatically:
 1. Waits for the TV to be online over ADB
-2. Installs `kiosk-video-player-v1.0.0.apk` with `-r -d`
+2. Installs `kiosk-video-player-v1.0.1.apk` with `-r -d`
 3. Automatically grants `MANAGE_EXTERNAL_STORAGE` permission via `appops`
 4. Creates `/sdcard/Kiosk/Media`
 5. Pushes sample Futurotec media pairs if empty
@@ -31,7 +46,7 @@ This script automatically:
 
 ## Option B: Install without `adb` (USB Flash Drive / TV File Manager)
 
-1. Copy `kiosk-video-player-v1.0.0.apk` onto a USB flash drive.
+1. Copy `kiosk-video-player-v1.0.1.apk` onto a USB flash drive.
 2. Plug the USB drive into the Android TV and open the TV's **File Manager** app.
 3. Tap the `.apk` file to install.
    - If prompted, open **Settings -> Install unknown apps** and enable permission for your File Manager.

@@ -36,6 +36,11 @@ export async function performMediaScan(cardsPerPage?: number): Promise<void> {
 
 export async function executeStartup(isMounted: () => boolean = () => true): Promise<void> {
   try {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : 'Node/Test';
+    const chromeVer = ua.match(/(?:Chrome|Chromium)\/([0-9.]+)/i)?.[0] || 'Chrome/Unknown';
+    if (typeof bridge.logClientMessage === 'function') {
+      bridge.logClientMessage('INFO', `Startup: Engine=${chromeVer} Platform=${bridge.platform} UA=${ua}`);
+    }
     if (typeof bridge.initPlatform === 'function') {
       await bridge.initPlatform();
     }

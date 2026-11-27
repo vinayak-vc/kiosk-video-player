@@ -11,7 +11,7 @@
   does not alter system/user PowerShell execution policy).
 #>
 param(
-    [string[]]$Targets = @("aarch64", "x86_64"),
+    [string[]]$Targets = @("aarch64", "armv7", "x86_64"),
     [switch]$Release
 )
 
